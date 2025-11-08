@@ -1,314 +1,131 @@
-# Bitpin Task - Kubernetes Deployment
 
-This repository contains Kubernetes manifests, Helm charts, and CI/CD pipelines for deploying the Bitpin cryptocurrency exchange application.
+<h1 align="center">CryptoCurrency Exchange
 
-## 📋 Table of Contents
+![status][status-badge] ![python version][python-badge] ![django version][django-badge] ![unit tests][unit-tests-badge] ![coverage][coverage-badge] 
+</h1> 
 
-- [Overview](#overview)
-- [Architecture](#architecture)
-- [Prerequisites](#prerequisites)
-- [Directory Structure](#directory-structure)
-- [Deployment](#deployment)
-- [CI/CD](#cicd)
-- [Monitoring & Logging](#monitoring--logging)
-- [Backup Strategy](#backup-strategy)
 
-## 🎯 Overview
+<h3>
+<p align="center">
+  <a href="#key-features">Key Features</a> •
+  <a href="#built-with">Built With</a> •
+  <a href="#database-schema">Database Schema</a> •
+  <a href="#api-reference">API Reference</a> •
+  <a href="#how-to-use">How To Use</a> •
+  <a href="#roadmap">Roadmap</a>
+</p> <br>
+</h3>
 
-This project deploys a Django-based cryptocurrency exchange application on Kubernetes with:
-- PostgreSQL database cluster (CloudNativePG)
-- Automated backups
-- Monitoring (Prometheus + Grafana)
-- Logging (Loki + Grafana)
-- CI/CD pipeline (GitHub Actions)
 
-## 🏗️ Architecture
 
-```
-┌─────────────────┐
-│   LoadBalancer  │
-│   / Ingress     │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐     ┌─────────────────┐
-│   bitpin-app    │────▶│  PostgreSQL     │
-│   (Django)       │     │  Cluster        │
-│   Deployment    │     │  (Primary+Replica)│
-└─────────────────┘     └─────────────────┘
-         │
-         ├─────────────────┐
-         ▼                 ▼
-┌─────────────────┐  ┌─────────────────┐
-│   Prometheus    │  │      Loki        │
-│   (Metrics)     │  │   (Logs)        │
-└─────────────────┘  └─────────────────┘
-```
+# About The Project
 
-## 📁 Directory Structure
+## Key Features
 
-```
-general/
-├── helm/
-│   └── bitpin-app/          # Helm chart for application
-│       ├── Chart.yaml
-│       ├── values.yaml
-│       └── templates/
-│           ├── deployment.yaml
-│           ├── service.yaml
-│           ├── ingress.yaml
-│           ├── hpa.yaml
-│           └── _helpers.tpl
-├── .github/
-│   └── workflows/
-│       ├── ci-cd.yml        # Main CI/CD pipeline
-│       └── backup-job.yml   # Backup automation
-├── bitpin-app-deployment.yaml
-├── bitpin-app-service.yaml
-├── bitpin-postgres-cluster.yaml
-├── bitpin-backup-cronjobs.yaml
-├── bitpin-task-namespace.yaml
-├── logging-resources.yaml
-├── monitoring-resources.yaml
-└── README.md
-```
+> **Note**
+> The project is under development so some elements from `Key Features` are subject to change
 
-## 🚀 Prerequisites
+* Registration/Login 
+* Password reset by mail
+* Two Factor Authentication
+* Trading tokens on the exchange
+* Withdrawal/Deposit fiat and crypto
+* History of operations
+* Referal codes
+* Adress book with saved contacts
+* Token price flow charts
+* Creating signals
+* API
+* Unit tests
+* Typing
+* Docstrings
+* Format according to PEP8
+* ...
 
-- Kubernetes cluster (v1.24+)
-- kubectl configured
-- Helm 3.x installed
-- CloudNativePG operator installed
-- Docker (for building images)
-- GitHub repository with secrets configured
+## Built With
 
-## 📦 Deployment
+* Python
+* Django
+* Django REST API
+* Pytest
+* MySQL
+* Bootstrap
+* JavaScript
+* HTML
+* CSS
+* HTTP requests
+* ...
 
-### Step 1: Install CloudNativePG Operator
+
+## Database Schema
+![databse-schema](images/database_schema.svg)
+
+# API Reference
+
+<p align="center">
+<img width="700" alt="comingsoon" src="images/cooming_soon.png">
+</p>
+
+
+# How To Use
+
+To clone and run this application, you'll need [Git](https://git-scm.com) installed on your computer.
+[Database configuration](https://docs.djangoproject.com/en/4.1/ref/settings/#databases).
+From your command line:
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/release-1.22/releases/cnpg-1.22.0.yaml
+# Clone this repository
+$ git clone https://github.com/MGasiorowskii/CryptoCurrencyExchange
+
+# Create file .env with the following content
+  API_KEY='ENTER YOUR API KEY'
+  DEBUG=True
+  DATABASE_NAME='YOUR DATABASE NAME'
+  DATABASE_USER='YOUR DATABASE USERNAME'
+  DATABASE_PASSWORD='YOUR DATABASE PASSWORD'
+  DATABASE_HOST='YOUR DATABASE HOST'
+  DATABASE_PORT='YOUR DATABASE PORT'
+
+# Go into the repository
+$ cd Exchange
+
+# Apply all migrations
+$ python manage.py migrate
+
+# Run the app
+$ python manage.py runserver
 ```
 
-### Step 2: Deploy PostgreSQL Cluster
+# Roadmap
 
-```bash
-kubectl apply -f bitpin-postgres-cluster.yaml
-kubectl wait --for=condition=Ready cluster/bitpin-cluster -n bitpin-task --timeout=300s
-```
+- [x] Registration/Login
+- [x] Logout
+- [x] Profile
+  - [x] User update Form / Profile update Form
+  - [x] Change password form
+  - [ ] Referal codes
+  - [ ] Adress book with saved contacts
+- [x] Password reset by mail
+- [ ] Two Factor Authentication
+- [x] Exchange
+  - [x] List of tokens with price
+  - [x] Token price flow charts
+- [x] Trading tokens on the exchange
+- [ ] Withdrawal/Deposit fiat and crypto
+- [x] History of operations
+- [ ] Creating signals
+- [ ] API
+- [ ] ...
 
-### Step 3: Deploy Application with Helm
 
-```bash
-# Install the Helm chart
-helm install bitpin-app ./helm/bitpin-app \
-  --namespace bitpin-task \
-  --create-namespace
 
-# Or upgrade if already installed
-helm upgrade --install bitpin-app ./helm/bitpin-app \
-  --namespace bitpin-task \
-  --create-namespace
-```
+> E-mail [gasiorowskii.mateusz@gmail.com](mailto:gasiorowskii.mateusz@gmail.com) &nbsp;&middot;&nbsp;
+> GitHub [@MGasiorowskii](https://github.com/MGasiorowskii) &nbsp;&middot;&nbsp;
+> Linkedin [Mateusz Gąsiorowski](https://www.linkedin.com/in/mateusz-gąsiorowski-987273197/) &nbsp;&nbsp;
 
-### Step 4: Verify Deployment
 
-```bash
-kubectl get pods -n bitpin-task
-kubectl get svc -n bitpin-task
-kubectl logs -f deployment/bitpin-app -n bitpin-task
-```
-
-## 🔄 CI/CD
-
-### GitHub Actions Workflows
-
-#### Main CI/CD Pipeline (`.github/workflows/ci-cd.yml`)
-
-**Triggers:**
-- Push to main/master branch
-- Pull requests to main/master
-- Manual trigger (workflow_dispatch)
-
-**Jobs:**
-1. **Build and Push**: Builds Docker image and pushes to Docker Hub
-2. **Lint Helm**: Validates Helm chart syntax
-3. **Deploy**: Deploys application to Kubernetes using Helm
-
-**Required Secrets:**
-- `DOCKER_USERNAME`: Docker Hub username
-- `DOCKER_PASSWORD`: Docker Hub password/token
-- `KUBECONFIG`: Base64-encoded kubeconfig file
-
-#### Backup Job (`.github/workflows/backup-job.yml`)
-
-**Triggers:**
-- Daily at 2 AM UTC (cron schedule)
-- Manual trigger (workflow_dispatch)
-
-**Function:**
-- Triggers database backup CronJob
-- Waits for backup completion
-
-### Setting Up CI/CD
-
-1. **Add GitHub Secrets:**
-   - Go to: Settings > Secrets and variables > Actions
-   - Add:
-     - `DOCKER_USERNAME`: your-username
-     - `DOCKER_PASSWORD`: your-token
-     - `KUBECONFIG`: `$(cat ~/.kube/config | base64 -w 0)`
-
-2. **Push to trigger pipeline:**
-   ```bash
-   git push origin main
-   ```
-
-## 📊 Monitoring & Logging
-
-### Accessing Dashboards
-
-#### Prometheus
-```bash
-kubectl port-forward svc/prometheus-kube-prometheus-prometheus -n monitoring 9090:9090
-# Access: http://localhost:9090
-```
-
-#### Grafana (Monitoring)
-```bash
-kubectl port-forward svc/grafana -n monitoring 3000:3000
-# Access: http://localhost:3000
-# Default: admin/admin
-```
-
-#### Grafana (Logging)
-```bash
-kubectl port-forward svc/loki-grafana -n logging 3001:80
-# Access: http://localhost:3001
-```
-
-### Key Metrics
-
-- Application health and availability
-- Database connection pool metrics
-- Request latency and throughput
-- Resource utilization (CPU, Memory)
-- Pod restart counts
-
-## 💾 Backup Strategy
-
-### Backup Mechanisms
-
-1. **Full Backup CronJob**: Runs daily at 2 AM UTC
-   - Job: `bitpin-full-backup`
-   - Creates complete database dump
-
-2. **Incremental Backup CronJob**: Runs every 15 minutes
-   - Job: `bitpin-incremental-backup`
-   - WAL (Write-Ahead Log) archiving
-
-3. **Manual Backup**: Trigger via GitHub Actions or kubectl
-   ```bash
-   kubectl create job --from=cronjob/bitpin-full-backup manual-backup-$(date +%Y%m%d-%H%M%S) -n bitpin-task
-   ```
-
-### Backup Location
-
-Backups are stored in persistent volumes. Check backup jobs:
-```bash
-kubectl get jobs -n bitpin-task | grep backup
-kubectl logs job/<backup-job-name> -n bitpin-task
-```
-
-## 🔧 Configuration
-
-### Helm Values
-
-Edit `helm/bitpin-app/values.yaml` to customize:
-- Replica count
-- Resource limits/requests
-- Service type and ports
-- Environment variables
-- Database connection settings
-- Health check probes
-
-### Example Customization
-
-```yaml
-# Scale application
-replicaCount: 3
-
-# Enable autoscaling
-autoscaling:
-  enabled: true
-  minReplicas: 2
-  maxReplicas: 5
-
-# Enable ingress
-ingress:
-  enabled: true
-  hosts:
-    - host: bitpin.example.com
-      paths:
-        - path: /
-          pathType: Prefix
-```
-
-## 🐛 Troubleshooting
-
-### Application Not Starting
-
-```bash
-kubectl get pods -n bitpin-task
-kubectl logs -f deployment/bitpin-app -n bitpin-task
-kubectl describe pod <pod-name> -n bitpin-task
-```
-
-### Database Connection Issues
-
-```bash
-kubectl get cluster -n bitpin-task
-kubectl get pods -n bitpin-task | grep cluster
-kubectl exec -it bitpin-cluster-1 -n bitpin-task -- psql -U bitpin_user -d bitpin_db
-```
-
-### Service Not Accessible
-
-```bash
-kubectl get endpoints -n bitpin-task
-kubectl describe svc bitpin-app-svc -n bitpin-task
-```
-
-## 📝 Additional Resources
-
-- [CloudNativePG Documentation](https://cloudnative-pg.io/)
-- [Helm Documentation](https://helm.sh/docs/)
-- [Kubernetes Documentation](https://kubernetes.io/docs/)
-- [Prometheus Documentation](https://prometheus.io/docs/)
-- [Loki Documentation](https://grafana.com/docs/loki/latest/)
-
-## 👥 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-
-## 📄 License
-
-This project is part of the Bitpin interview task.
-
-## 🔗 Links
-
-- **Repository**: https://github.com/YasamanGholamian/bitpin-task
-- **Application Source**: https://github.com/MGasiorowskii/CryptoCurrencyExchange
-
----
-
-**Note**: This deployment is configured for a development/testing environment. For production, consider:
-- Using Ingress with TLS certificates
-- Implementing resource quotas and limits
-- Setting up network policies
-- Configuring backup retention policies
-- Enabling monitoring alerts
-- Implementing proper secret management
+[status-badge]: https://img.shields.io/badge/status-InWork-informational
+[python-badge]: https://img.shields.io/badge/python-3.9-blue
+[django-badge]: https://img.shields.io/badge/django-4.1-informational
+[coverage-badge]: https://img.shields.io/badge/coverage-0%25-red
+[unit-tests-badge]: https://img.shields.io/badge/unit_tests-pytest-brighttgreen
