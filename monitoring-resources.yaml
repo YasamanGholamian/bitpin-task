@@ -1,0 +1,5652 @@
+apiVersion: v1
+items:
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/default-container: alertmanager
+    creationTimestamp: "2025-11-07T19:25:36Z"
+    generateName: alertmanager-prometheus-kube-prometheus-alertmanager-
+    generation: 1
+    labels:
+      alertmanager: prometheus-kube-prometheus-alertmanager
+      app.kubernetes.io/instance: prometheus-kube-prometheus-alertmanager
+      app.kubernetes.io/managed-by: prometheus-operator
+      app.kubernetes.io/name: alertmanager
+      app.kubernetes.io/version: 0.29.0
+      apps.kubernetes.io/pod-index: "0"
+      controller-revision-hash: alertmanager-prometheus-kube-prometheus-alertmanager-754f99fd86
+      statefulset.kubernetes.io/pod-name: alertmanager-prometheus-kube-prometheus-alertmanager-0
+    name: alertmanager-prometheus-kube-prometheus-alertmanager-0
+    namespace: monitoring
+    ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: StatefulSet
+      name: alertmanager-prometheus-kube-prometheus-alertmanager
+      uid: b5b47f37-7f3a-4da8-af87-30110d073a18
+    resourceVersion: "71514"
+    uid: 66708039-b2aa-427a-b3fd-9a83f217d7f5
+  spec:
+    affinity:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+        - podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                - alertmanager
+              - key: alertmanager
+                operator: In
+                values:
+                - prometheus-kube-prometheus-alertmanager
+            topologyKey: kubernetes.io/hostname
+          weight: 100
+    automountServiceAccountToken: true
+    containers:
+    - args:
+      - --config.file=/etc/alertmanager/config_out/alertmanager.env.yaml
+      - --storage.path=/alertmanager
+      - --data.retention=120h
+      - --cluster.listen-address=
+      - --web.listen-address=:9093
+      - --web.external-url=http://prometheus-kube-prometheus-alertmanager.monitoring:9093
+      - --web.route-prefix=/
+      - --cluster.label=monitoring/prometheus-kube-prometheus-alertmanager
+      - --cluster.peer=alertmanager-prometheus-kube-prometheus-alertmanager-0.alertmanager-operated:9094
+      - --cluster.reconnect-timeout=5m
+      - --web.config.file=/etc/alertmanager/web_config/web-config.yaml
+      env:
+      - name: POD_IP
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: status.podIP
+      image: quay.io/prometheus/alertmanager:v0.29.0
+      imagePullPolicy: IfNotPresent
+      livenessProbe:
+        failureThreshold: 10
+        httpGet:
+          path: /-/healthy
+          port: http-web
+          scheme: HTTP
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 3
+      name: alertmanager
+      ports:
+      - containerPort: 9093
+        name: http-web
+        protocol: TCP
+      - containerPort: 9094
+        name: mesh-tcp
+        protocol: TCP
+      - containerPort: 9094
+        name: mesh-udp
+        protocol: UDP
+      readinessProbe:
+        failureThreshold: 10
+        httpGet:
+          path: /-/ready
+          port: http-web
+          scheme: HTTP
+        initialDelaySeconds: 3
+        periodSeconds: 5
+        successThreshold: 1
+        timeoutSeconds: 3
+      resources:
+        requests:
+          memory: 200Mi
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        readOnlyRootFilesystem: true
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: FallbackToLogsOnError
+      volumeMounts:
+      - mountPath: /etc/alertmanager/config
+        name: config-volume
+      - mountPath: /etc/alertmanager/config_out
+        name: config-out
+        readOnly: true
+      - mountPath: /etc/alertmanager/certs
+        name: tls-assets
+        readOnly: true
+      - mountPath: /alertmanager
+        name: alertmanager-prometheus-kube-prometheus-alertmanager-db
+      - mountPath: /etc/alertmanager/web_config/web-config.yaml
+        name: web-config
+        readOnly: true
+        subPath: web-config.yaml
+      - mountPath: /etc/alertmanager/cluster_tls_config/cluster-tls-config.yaml
+        name: cluster-tls-config
+        readOnly: true
+        subPath: cluster-tls-config.yaml
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-85qgh
+        readOnly: true
+    - args:
+      - --listen-address=:8080
+      - --web-config-file=/etc/alertmanager/web_config/web-config.yaml
+      - --reload-url=http://127.0.0.1:9093/-/reload
+      - --config-file=/etc/alertmanager/config/alertmanager.yaml.gz
+      - --config-envsubst-file=/etc/alertmanager/config_out/alertmanager.env.yaml
+      - --watched-dir=/etc/alertmanager/config
+      command:
+      - /bin/prometheus-config-reloader
+      env:
+      - name: POD_NAME
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.name
+      - name: SHARD
+        value: "-1"
+      image: quay.io/prometheus-operator/prometheus-config-reloader:v0.86.2
+      imagePullPolicy: IfNotPresent
+      name: config-reloader
+      ports:
+      - containerPort: 8080
+        name: reloader-web
+        protocol: TCP
+      resources: {}
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        readOnlyRootFilesystem: true
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: FallbackToLogsOnError
+      volumeMounts:
+      - mountPath: /etc/alertmanager/config
+        name: config-volume
+        readOnly: true
+      - mountPath: /etc/alertmanager/config_out
+        name: config-out
+      - mountPath: /etc/alertmanager/web_config/web-config.yaml
+        name: web-config
+        readOnly: true
+        subPath: web-config.yaml
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-85qgh
+        readOnly: true
+    dnsPolicy: ClusterFirst
+    enableServiceLinks: true
+    hostname: alertmanager-prometheus-kube-prometheus-alertmanager-0
+    initContainers:
+    - args:
+      - --watch-interval=0
+      - --listen-address=:8081
+      - --config-file=/etc/alertmanager/config/alertmanager.yaml.gz
+      - --config-envsubst-file=/etc/alertmanager/config_out/alertmanager.env.yaml
+      - --watched-dir=/etc/alertmanager/config
+      command:
+      - /bin/prometheus-config-reloader
+      env:
+      - name: POD_NAME
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.name
+      - name: SHARD
+        value: "-1"
+      image: quay.io/prometheus-operator/prometheus-config-reloader:v0.86.2
+      imagePullPolicy: IfNotPresent
+      name: init-config-reloader
+      ports:
+      - containerPort: 8081
+        name: reloader-init
+        protocol: TCP
+      resources: {}
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        readOnlyRootFilesystem: true
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: FallbackToLogsOnError
+      volumeMounts:
+      - mountPath: /etc/alertmanager/config
+        name: config-volume
+        readOnly: true
+      - mountPath: /etc/alertmanager/config_out
+        name: config-out
+      - mountPath: /etc/alertmanager/web_config/web-config.yaml
+        name: web-config
+        readOnly: true
+        subPath: web-config.yaml
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-85qgh
+        readOnly: true
+    nodeName: mobin-log-backup-able
+    preemptionPolicy: PreemptLowerPriority
+    priority: 0
+    restartPolicy: Always
+    schedulerName: default-scheduler
+    securityContext:
+      fsGroup: 2000
+      runAsGroup: 2000
+      runAsNonRoot: true
+      runAsUser: 1000
+      seccompProfile:
+        type: RuntimeDefault
+    serviceAccount: prometheus-kube-prometheus-alertmanager
+    serviceAccountName: prometheus-kube-prometheus-alertmanager
+    subdomain: alertmanager-operated
+    terminationGracePeriodSeconds: 120
+    tolerations:
+    - effect: NoExecute
+      key: node.kubernetes.io/not-ready
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoExecute
+      key: node.kubernetes.io/unreachable
+      operator: Exists
+      tolerationSeconds: 300
+    volumes:
+    - name: config-volume
+      secret:
+        defaultMode: 420
+        secretName: alertmanager-prometheus-kube-prometheus-alertmanager-generated
+    - name: tls-assets
+      projected:
+        defaultMode: 420
+        sources:
+        - secret:
+            name: alertmanager-prometheus-kube-prometheus-alertmanager-tls-assets-0
+    - emptyDir:
+        medium: Memory
+      name: config-out
+    - name: web-config
+      secret:
+        defaultMode: 420
+        secretName: alertmanager-prometheus-kube-prometheus-alertmanager-web-config
+    - name: cluster-tls-config
+      secret:
+        defaultMode: 420
+        secretName: alertmanager-prometheus-kube-prometheus-alertmanager-cluster-tls-config
+    - emptyDir: {}
+      name: alertmanager-prometheus-kube-prometheus-alertmanager-db
+    - name: kube-api-access-85qgh
+      projected:
+        defaultMode: 420
+        sources:
+        - serviceAccountToken:
+            expirationSeconds: 3607
+            path: token
+        - configMap:
+            items:
+            - key: ca.crt
+              path: ca.crt
+            name: kube-root-ca.crt
+        - downwardAPI:
+            items:
+            - fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+              path: namespace
+  status:
+    conditions:
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-07T19:25:43Z"
+      status: "True"
+      type: PodReadyToStartContainers
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-07T19:25:44Z"
+      status: "True"
+      type: Initialized
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-07T19:26:01Z"
+      status: "True"
+      type: Ready
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-07T19:26:01Z"
+      status: "True"
+      type: ContainersReady
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-07T19:25:36Z"
+      status: "True"
+      type: PodScheduled
+    containerStatuses:
+    - allocatedResources:
+        memory: 200Mi
+      containerID: containerd://d46d0a8f66e51608bc8cda976359fbd96e89a3ab72d79b973e57b0b5c2c423a8
+      image: quay.io/prometheus/alertmanager:v0.29.0
+      imageID: quay.io/prometheus/alertmanager@sha256:88743b63b3e09ea6e31e140ced5bf45f4a8e82c617c2a963f78841f4995ad1d7
+      lastState: {}
+      name: alertmanager
+      ready: true
+      resources:
+        requests:
+          memory: 200Mi
+      restartCount: 0
+      started: true
+      state:
+        running:
+          startedAt: "2025-11-07T19:25:54Z"
+      user:
+        linux:
+          gid: 2000
+          supplementalGroups:
+          - 2000
+          uid: 1000
+      volumeMounts:
+      - mountPath: /etc/alertmanager/config
+        name: config-volume
+      - mountPath: /etc/alertmanager/config_out
+        name: config-out
+        readOnly: true
+        recursiveReadOnly: Disabled
+      - mountPath: /etc/alertmanager/certs
+        name: tls-assets
+        readOnly: true
+        recursiveReadOnly: Disabled
+      - mountPath: /alertmanager
+        name: alertmanager-prometheus-kube-prometheus-alertmanager-db
+      - mountPath: /etc/alertmanager/web_config/web-config.yaml
+        name: web-config
+        readOnly: true
+        recursiveReadOnly: Disabled
+      - mountPath: /etc/alertmanager/cluster_tls_config/cluster-tls-config.yaml
+        name: cluster-tls-config
+        readOnly: true
+        recursiveReadOnly: Disabled
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-85qgh
+        readOnly: true
+        recursiveReadOnly: Disabled
+    - containerID: containerd://1e651cd3acf5bdb7882690eae994912b7941693d764bc072d7cae156b4e65b3a
+      image: quay.io/prometheus-operator/prometheus-config-reloader:v0.86.2
+      imageID: quay.io/prometheus-operator/prometheus-config-reloader@sha256:44dd821cb3dd26698c3e97b10dc22ec5707afe6126b5912dc11b169394bf2ef7
+      lastState: {}
+      name: config-reloader
+      ready: true
+      resources: {}
+      restartCount: 0
+      started: true
+      state:
+        running:
+          startedAt: "2025-11-07T19:25:54Z"
+      user:
+        linux:
+          gid: 2000
+          supplementalGroups:
+          - 2000
+          uid: 1000
+      volumeMounts:
+      - mountPath: /etc/alertmanager/config
+        name: config-volume
+        readOnly: true
+        recursiveReadOnly: Disabled
+      - mountPath: /etc/alertmanager/config_out
+        name: config-out
+      - mountPath: /etc/alertmanager/web_config/web-config.yaml
+        name: web-config
+        readOnly: true
+        recursiveReadOnly: Disabled
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-85qgh
+        readOnly: true
+        recursiveReadOnly: Disabled
+    hostIP: 10.33.3.42
+    hostIPs:
+    - ip: 10.33.3.42
+    initContainerStatuses:
+    - containerID: containerd://b9aafa7d882e5ee2d3f9d897b150ac7729c5216ee49b350ef55171a1bb53b26a
+      image: quay.io/prometheus-operator/prometheus-config-reloader:v0.86.2
+      imageID: quay.io/prometheus-operator/prometheus-config-reloader@sha256:44dd821cb3dd26698c3e97b10dc22ec5707afe6126b5912dc11b169394bf2ef7
+      lastState: {}
+      name: init-config-reloader
+      ready: true
+      resources: {}
+      restartCount: 0
+      started: false
+      state:
+        terminated:
+          containerID: containerd://b9aafa7d882e5ee2d3f9d897b150ac7729c5216ee49b350ef55171a1bb53b26a
+          exitCode: 0
+          finishedAt: "2025-11-07T19:25:42Z"
+          reason: Completed
+          startedAt: "2025-11-07T19:25:42Z"
+      user:
+        linux:
+          gid: 2000
+          supplementalGroups:
+          - 2000
+          uid: 1000
+      volumeMounts:
+      - mountPath: /etc/alertmanager/config
+        name: config-volume
+        readOnly: true
+        recursiveReadOnly: Disabled
+      - mountPath: /etc/alertmanager/config_out
+        name: config-out
+      - mountPath: /etc/alertmanager/web_config/web-config.yaml
+        name: web-config
+        readOnly: true
+        recursiveReadOnly: Disabled
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-85qgh
+        readOnly: true
+        recursiveReadOnly: Disabled
+    phase: Running
+    podIP: 10.42.0.131
+    podIPs:
+    - ip: 10.42.0.131
+    qosClass: Burstable
+    startTime: "2025-11-07T19:25:36Z"
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    creationTimestamp: "2025-11-07T16:34:54Z"
+    generateName: grafana-dcd7c9b7c-
+    generation: 1
+    labels:
+      app: grafana
+      pod-template-hash: dcd7c9b7c
+    name: grafana-dcd7c9b7c-glk7p
+    namespace: monitoring
+    ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: ReplicaSet
+      name: grafana-dcd7c9b7c
+      uid: 487f2195-460e-422d-9637-eebcc7ff6d1e
+    resourceVersion: "55448"
+    uid: e368522b-cce8-41cf-8b65-03fe8b064dc1
+  spec:
+    containers:
+    - env:
+      - name: GF_SECURITY_ADMIN_USER
+        value: admin
+      - name: GF_SECURITY_ADMIN_PASSWORD
+        value: admin123
+      image: grafana/grafana:10.0.1
+      imagePullPolicy: Always
+      name: grafana
+      ports:
+      - containerPort: 3000
+        protocol: TCP
+      resources: {}
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-h64b5
+        readOnly: true
+    dnsPolicy: ClusterFirst
+    enableServiceLinks: true
+    nodeName: mobin-log-backup-able
+    preemptionPolicy: PreemptLowerPriority
+    priority: 0
+    restartPolicy: Always
+    schedulerName: default-scheduler
+    securityContext: {}
+    serviceAccount: default
+    serviceAccountName: default
+    terminationGracePeriodSeconds: 30
+    tolerations:
+    - effect: NoExecute
+      key: node.kubernetes.io/not-ready
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoExecute
+      key: node.kubernetes.io/unreachable
+      operator: Exists
+      tolerationSeconds: 300
+    volumes:
+    - name: kube-api-access-h64b5
+      projected:
+        defaultMode: 420
+        sources:
+        - serviceAccountToken:
+            expirationSeconds: 3607
+            path: token
+        - configMap:
+            items:
+            - key: ca.crt
+              path: ca.crt
+            name: kube-root-ca.crt
+        - downwardAPI:
+            items:
+            - fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+              path: namespace
+  status:
+    conditions:
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-07T16:35:11Z"
+      status: "True"
+      type: PodReadyToStartContainers
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-07T16:34:54Z"
+      status: "True"
+      type: Initialized
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-07T16:35:11Z"
+      status: "True"
+      type: Ready
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-07T16:35:11Z"
+      status: "True"
+      type: ContainersReady
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-07T16:34:54Z"
+      status: "True"
+      type: PodScheduled
+    containerStatuses:
+    - containerID: containerd://a474a7fc2963a211c329ce50eb2ad19ee7a4b899f60e136e9954976f651eb491
+      image: docker.io/grafana/grafana:10.0.1
+      imageID: docker.io/grafana/grafana@sha256:c2a9d25b77b9a7439e56efffa916e43eda09db4f7b78526082443f9c2ee18dc0
+      lastState: {}
+      name: grafana
+      ready: true
+      resources: {}
+      restartCount: 0
+      started: true
+      state:
+        running:
+          startedAt: "2025-11-07T16:35:11Z"
+      user:
+        linux:
+          gid: 0
+          supplementalGroups:
+          - 0
+          uid: 472
+      volumeMounts:
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-h64b5
+        readOnly: true
+        recursiveReadOnly: Disabled
+    hostIP: 10.33.3.42
+    hostIPs:
+    - ip: 10.33.3.42
+    phase: Running
+    podIP: 10.42.0.102
+    podIPs:
+    - ip: 10.42.0.102
+    qosClass: BestEffort
+    startTime: "2025-11-07T16:34:54Z"
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    creationTimestamp: "2025-11-07T17:33:44Z"
+    generateName: kube-state-metrics-74476bcc4b-
+    generation: 1
+    labels:
+      app: kube-state-metrics
+      pod-template-hash: 74476bcc4b
+    name: kube-state-metrics-74476bcc4b-7bwlh
+    namespace: monitoring
+    ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: ReplicaSet
+      name: kube-state-metrics-74476bcc4b
+      uid: 7b36cd64-7388-49d3-8120-fe1d2a90849f
+    resourceVersion: "61534"
+    uid: c7c31209-0cd7-4258-8d4a-712bb43e84cc
+  spec:
+    containers:
+    - args:
+      - --host=0.0.0.0
+      - --port=8080
+      - --metric-labels-allowlist=pods=[*],deployments=[*],services=[*],nodes=[*],namespaces=[*]
+      image: k8s.gcr.io/kube-state-metrics/kube-state-metrics:v2.12.0
+      imagePullPolicy: IfNotPresent
+      name: kube-state-metrics
+      ports:
+      - containerPort: 8080
+        protocol: TCP
+      resources: {}
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-t2j28
+        readOnly: true
+    dnsPolicy: ClusterFirst
+    enableServiceLinks: true
+    nodeName: mobin-log-backup-able
+    preemptionPolicy: PreemptLowerPriority
+    priority: 0
+    restartPolicy: Always
+    schedulerName: default-scheduler
+    securityContext: {}
+    serviceAccount: default
+    serviceAccountName: default
+    terminationGracePeriodSeconds: 30
+    tolerations:
+    - effect: NoExecute
+      key: node.kubernetes.io/not-ready
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoExecute
+      key: node.kubernetes.io/unreachable
+      operator: Exists
+      tolerationSeconds: 300
+    volumes:
+    - name: kube-api-access-t2j28
+      projected:
+        defaultMode: 420
+        sources:
+        - serviceAccountToken:
+            expirationSeconds: 3607
+            path: token
+        - configMap:
+            items:
+            - key: ca.crt
+              path: ca.crt
+            name: kube-root-ca.crt
+        - downwardAPI:
+            items:
+            - fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+              path: namespace
+  status:
+    conditions:
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-07T17:33:45Z"
+      status: "True"
+      type: PodReadyToStartContainers
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-07T17:33:44Z"
+      status: "True"
+      type: Initialized
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-07T17:33:45Z"
+      status: "True"
+      type: Ready
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-07T17:33:45Z"
+      status: "True"
+      type: ContainersReady
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-07T17:33:44Z"
+      status: "True"
+      type: PodScheduled
+    containerStatuses:
+    - containerID: containerd://f389a49f37171452546f1397d84123d75e58161c74c85cfa924142179271682b
+      image: k8s.gcr.io/kube-state-metrics/kube-state-metrics:v2.12.0
+      imageID: k8s.gcr.io/kube-state-metrics/kube-state-metrics@sha256:b401fae262a5decf83c4311083f8efb4d6ca7b6a733e57b95344cb8dccd14e11
+      lastState: {}
+      name: kube-state-metrics
+      ready: true
+      resources: {}
+      restartCount: 0
+      started: true
+      state:
+        running:
+          startedAt: "2025-11-07T17:33:45Z"
+      user:
+        linux:
+          gid: 65534
+          supplementalGroups:
+          - 65534
+          uid: 65534
+      volumeMounts:
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-t2j28
+        readOnly: true
+        recursiveReadOnly: Disabled
+    hostIP: 10.33.3.42
+    hostIPs:
+    - ip: 10.33.3.42
+    phase: Running
+    podIP: 10.42.0.124
+    podIPs:
+    - ip: 10.42.0.124
+    qosClass: BestEffort
+    startTime: "2025-11-07T17:33:44Z"
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    annotations:
+      checksum/config: 0e9cbd0ea8e24e32f7dfca5bab17a2ba05652642f0a09a4882833ae88e4cc4a3
+      checksum/sc-dashboard-provider-config: e70bf6a851099d385178a76de9757bb0bef8299da6d8443602590e44f05fdf24
+      checksum/secret: d59c34c72d250b17a69bb5c29d4f0b6b0b62f1753ab442745f78f806c7e20a1e
+      kubectl.kubernetes.io/default-container: grafana
+    creationTimestamp: "2025-11-08T11:00:37Z"
+    generateName: prometheus-grafana-bb6bf7779-
+    generation: 1
+    labels:
+      app.kubernetes.io/instance: prometheus
+      app.kubernetes.io/name: grafana
+      app.kubernetes.io/version: 12.2.1
+      helm.sh/chart: grafana-10.1.4
+      pod-template-hash: bb6bf7779
+    name: prometheus-grafana-bb6bf7779-92brw
+    namespace: monitoring
+    ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: ReplicaSet
+      name: prometheus-grafana-bb6bf7779
+      uid: f41c7787-7fe6-44c7-a2fa-b490e6618fdf
+    resourceVersion: "153025"
+    uid: d3d06cbe-9c10-4309-8cc6-612d05fff0e4
+  spec:
+    automountServiceAccountToken: true
+    containers:
+    - env:
+      - name: METHOD
+        value: WATCH
+      - name: LABEL
+        value: grafana_dashboard
+      - name: LABEL_VALUE
+        value: "1"
+      - name: FOLDER
+        value: /tmp/dashboards
+      - name: RESOURCE
+        value: both
+      - name: NAMESPACE
+        value: ALL
+      - name: REQ_USERNAME
+        valueFrom:
+          secretKeyRef:
+            key: admin-user
+            name: prometheus-grafana
+      - name: REQ_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            key: admin-password
+            name: prometheus-grafana
+      - name: REQ_URL
+        value: http://localhost:3000/api/admin/provisioning/dashboards/reload
+      - name: REQ_METHOD
+        value: POST
+      image: quay.io/kiwigrid/k8s-sidecar:1.30.10
+      imagePullPolicy: IfNotPresent
+      name: grafana-sc-dashboard
+      resources: {}
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        seccompProfile:
+          type: RuntimeDefault
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /tmp/dashboards
+        name: sc-dashboard-volume
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-85bzp
+        readOnly: true
+    - env:
+      - name: METHOD
+        value: WATCH
+      - name: LABEL
+        value: grafana_datasource
+      - name: LABEL_VALUE
+        value: "1"
+      - name: FOLDER
+        value: /etc/grafana/provisioning/datasources
+      - name: RESOURCE
+        value: both
+      - name: REQ_USERNAME
+        valueFrom:
+          secretKeyRef:
+            key: admin-user
+            name: prometheus-grafana
+      - name: REQ_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            key: admin-password
+            name: prometheus-grafana
+      - name: REQ_URL
+        value: http://localhost:3000/api/admin/provisioning/datasources/reload
+      - name: REQ_METHOD
+        value: POST
+      image: quay.io/kiwigrid/k8s-sidecar:1.30.10
+      imagePullPolicy: IfNotPresent
+      name: grafana-sc-datasources
+      resources: {}
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        seccompProfile:
+          type: RuntimeDefault
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /etc/grafana/provisioning/datasources
+        name: sc-datasources-volume
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-85bzp
+        readOnly: true
+    - env:
+      - name: POD_IP
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: status.podIP
+      - name: GF_SECURITY_ADMIN_USER
+        valueFrom:
+          secretKeyRef:
+            key: admin-user
+            name: prometheus-grafana
+      - name: GF_SECURITY_ADMIN_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            key: admin-password
+            name: prometheus-grafana
+      - name: GF_PATHS_DATA
+        value: /var/lib/grafana/
+      - name: GF_PATHS_LOGS
+        value: /var/log/grafana
+      - name: GF_PATHS_PLUGINS
+        value: /var/lib/grafana/plugins
+      - name: GF_PATHS_PROVISIONING
+        value: /etc/grafana/provisioning
+      image: docker.io/grafana/grafana:12.2.1
+      imagePullPolicy: IfNotPresent
+      livenessProbe:
+        failureThreshold: 10
+        httpGet:
+          path: /api/health
+          port: 3000
+          scheme: HTTP
+        initialDelaySeconds: 60
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 30
+      name: grafana
+      ports:
+      - containerPort: 3000
+        name: grafana
+        protocol: TCP
+      - containerPort: 9094
+        name: gossip-tcp
+        protocol: TCP
+      - containerPort: 9094
+        name: gossip-udp
+        protocol: UDP
+      - containerPort: 6060
+        name: profiling
+        protocol: TCP
+      readinessProbe:
+        failureThreshold: 3
+        httpGet:
+          path: /api/health
+          port: 3000
+          scheme: HTTP
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 1
+      resources: {}
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        seccompProfile:
+          type: RuntimeDefault
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /etc/grafana/grafana.ini
+        name: config
+        subPath: grafana.ini
+      - mountPath: /var/lib/grafana
+        name: storage
+      - mountPath: /tmp/dashboards
+        name: sc-dashboard-volume
+      - mountPath: /etc/grafana/provisioning/dashboards/sc-dashboardproviders.yaml
+        name: sc-dashboard-provider
+        subPath: provider.yaml
+      - mountPath: /etc/grafana/provisioning/datasources
+        name: sc-datasources-volume
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-85bzp
+        readOnly: true
+    dnsPolicy: ClusterFirst
+    enableServiceLinks: true
+    nodeName: mobin-log-backup-able
+    preemptionPolicy: PreemptLowerPriority
+    priority: 0
+    restartPolicy: Always
+    schedulerName: default-scheduler
+    securityContext:
+      fsGroup: 472
+      runAsGroup: 472
+      runAsNonRoot: true
+      runAsUser: 472
+    serviceAccount: prometheus-grafana
+    serviceAccountName: prometheus-grafana
+    shareProcessNamespace: false
+    terminationGracePeriodSeconds: 30
+    tolerations:
+    - effect: NoExecute
+      key: node.kubernetes.io/not-ready
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoExecute
+      key: node.kubernetes.io/unreachable
+      operator: Exists
+      tolerationSeconds: 300
+    volumes:
+    - configMap:
+        defaultMode: 420
+        name: prometheus-grafana
+      name: config
+    - emptyDir: {}
+      name: storage
+    - emptyDir: {}
+      name: sc-dashboard-volume
+    - configMap:
+        defaultMode: 420
+        name: prometheus-grafana-config-dashboards
+      name: sc-dashboard-provider
+    - emptyDir: {}
+      name: sc-datasources-volume
+    - name: kube-api-access-85bzp
+      projected:
+        defaultMode: 420
+        sources:
+        - serviceAccountToken:
+            expirationSeconds: 3607
+            path: token
+        - configMap:
+            items:
+            - key: ca.crt
+              path: ca.crt
+            name: kube-root-ca.crt
+        - downwardAPI:
+            items:
+            - fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+              path: namespace
+  status:
+    conditions:
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-08T11:06:19Z"
+      status: "True"
+      type: PodReadyToStartContainers
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-08T11:05:49Z"
+      status: "True"
+      type: Initialized
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-08T11:06:31Z"
+      status: "True"
+      type: Ready
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-08T11:06:31Z"
+      status: "True"
+      type: ContainersReady
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-08T11:05:48Z"
+      status: "True"
+      type: PodScheduled
+    containerStatuses:
+    - containerID: containerd://b7084b2c0c5275774844aedeb7e6ad564ed09b52ba8f22ccfceda303283705f0
+      image: docker.io/grafana/grafana:12.2.1
+      imageID: docker.io/grafana/grafana@sha256:35c41e0fd0295f5d0ee5db7e780cf33506abfaf47686196f825364889dee878b
+      lastState: {}
+      name: grafana
+      ready: true
+      resources: {}
+      restartCount: 0
+      started: true
+      state:
+        running:
+          startedAt: "2025-11-08T11:06:19Z"
+      user:
+        linux:
+          gid: 472
+          supplementalGroups:
+          - 0
+          - 472
+          uid: 472
+      volumeMounts:
+      - mountPath: /etc/grafana/grafana.ini
+        name: config
+      - mountPath: /var/lib/grafana
+        name: storage
+      - mountPath: /tmp/dashboards
+        name: sc-dashboard-volume
+      - mountPath: /etc/grafana/provisioning/dashboards/sc-dashboardproviders.yaml
+        name: sc-dashboard-provider
+      - mountPath: /etc/grafana/provisioning/datasources
+        name: sc-datasources-volume
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-85bzp
+        readOnly: true
+        recursiveReadOnly: Disabled
+    - containerID: containerd://d42bcaf51070565bd91d03c6aa94e6b5b5224c1e0fd038dfef83b957eeb00d3f
+      image: quay.io/kiwigrid/k8s-sidecar:1.30.10
+      imageID: quay.io/kiwigrid/k8s-sidecar@sha256:835d79d8fbae62e42d8a86929d4e3c5eec2e869255dd37756b5a3166c2f22309
+      lastState: {}
+      name: grafana-sc-dashboard
+      ready: true
+      resources: {}
+      restartCount: 0
+      started: true
+      state:
+        running:
+          startedAt: "2025-11-08T11:05:55Z"
+      user:
+        linux:
+          gid: 472
+          supplementalGroups:
+          - 472
+          uid: 472
+      volumeMounts:
+      - mountPath: /tmp/dashboards
+        name: sc-dashboard-volume
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-85bzp
+        readOnly: true
+        recursiveReadOnly: Disabled
+    - containerID: containerd://d6e82600182ea3b3ad64d0b9e4c503ddf5a0d32804fe048070f1b2ab7f9d922f
+      image: quay.io/kiwigrid/k8s-sidecar:1.30.10
+      imageID: quay.io/kiwigrid/k8s-sidecar@sha256:835d79d8fbae62e42d8a86929d4e3c5eec2e869255dd37756b5a3166c2f22309
+      lastState: {}
+      name: grafana-sc-datasources
+      ready: true
+      resources: {}
+      restartCount: 0
+      started: true
+      state:
+        running:
+          startedAt: "2025-11-08T11:05:55Z"
+      user:
+        linux:
+          gid: 472
+          supplementalGroups:
+          - 472
+          uid: 472
+      volumeMounts:
+      - mountPath: /etc/grafana/provisioning/datasources
+        name: sc-datasources-volume
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-85bzp
+        readOnly: true
+        recursiveReadOnly: Disabled
+    hostIP: 10.33.3.42
+    hostIPs:
+    - ip: 10.33.3.42
+    phase: Running
+    podIP: 10.42.0.208
+    podIPs:
+    - ip: 10.42.0.208
+    qosClass: BestEffort
+    startTime: "2025-11-08T11:05:49Z"
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    annotations:
+      checksum/config: 0e9cbd0ea8e24e32f7dfca5bab17a2ba05652642f0a09a4882833ae88e4cc4a3
+      checksum/sc-dashboard-provider-config: e70bf6a851099d385178a76de9757bb0bef8299da6d8443602590e44f05fdf24
+      checksum/secret: d59c34c72d250b17a69bb5c29d4f0b6b0b62f1753ab442745f78f806c7e20a1e
+      kubectl.kubernetes.io/default-container: grafana
+    creationTimestamp: "2025-11-07T19:25:29Z"
+    generateName: prometheus-grafana-bb6bf7779-
+    generation: 1
+    labels:
+      app.kubernetes.io/instance: prometheus
+      app.kubernetes.io/name: grafana
+      app.kubernetes.io/version: 12.2.1
+      helm.sh/chart: grafana-10.1.4
+      pod-template-hash: bb6bf7779
+    name: prometheus-grafana-bb6bf7779-lrswk
+    namespace: monitoring
+    ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: ReplicaSet
+      name: prometheus-grafana-bb6bf7779
+      uid: f41c7787-7fe6-44c7-a2fa-b490e6618fdf
+    resourceVersion: "152379"
+    uid: 9c29ba7a-550a-45ad-ad29-bf71816c8348
+  spec:
+    automountServiceAccountToken: true
+    containers:
+    - env:
+      - name: METHOD
+        value: WATCH
+      - name: LABEL
+        value: grafana_dashboard
+      - name: LABEL_VALUE
+        value: "1"
+      - name: FOLDER
+        value: /tmp/dashboards
+      - name: RESOURCE
+        value: both
+      - name: NAMESPACE
+        value: ALL
+      - name: REQ_USERNAME
+        valueFrom:
+          secretKeyRef:
+            key: admin-user
+            name: prometheus-grafana
+      - name: REQ_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            key: admin-password
+            name: prometheus-grafana
+      - name: REQ_URL
+        value: http://localhost:3000/api/admin/provisioning/dashboards/reload
+      - name: REQ_METHOD
+        value: POST
+      image: quay.io/kiwigrid/k8s-sidecar:1.30.10
+      imagePullPolicy: IfNotPresent
+      name: grafana-sc-dashboard
+      resources: {}
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        seccompProfile:
+          type: RuntimeDefault
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /tmp/dashboards
+        name: sc-dashboard-volume
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-rz897
+        readOnly: true
+    - env:
+      - name: METHOD
+        value: WATCH
+      - name: LABEL
+        value: grafana_datasource
+      - name: LABEL_VALUE
+        value: "1"
+      - name: FOLDER
+        value: /etc/grafana/provisioning/datasources
+      - name: RESOURCE
+        value: both
+      - name: REQ_USERNAME
+        valueFrom:
+          secretKeyRef:
+            key: admin-user
+            name: prometheus-grafana
+      - name: REQ_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            key: admin-password
+            name: prometheus-grafana
+      - name: REQ_URL
+        value: http://localhost:3000/api/admin/provisioning/datasources/reload
+      - name: REQ_METHOD
+        value: POST
+      image: quay.io/kiwigrid/k8s-sidecar:1.30.10
+      imagePullPolicy: IfNotPresent
+      name: grafana-sc-datasources
+      resources: {}
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        seccompProfile:
+          type: RuntimeDefault
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /etc/grafana/provisioning/datasources
+        name: sc-datasources-volume
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-rz897
+        readOnly: true
+    - env:
+      - name: POD_IP
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: status.podIP
+      - name: GF_SECURITY_ADMIN_USER
+        valueFrom:
+          secretKeyRef:
+            key: admin-user
+            name: prometheus-grafana
+      - name: GF_SECURITY_ADMIN_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            key: admin-password
+            name: prometheus-grafana
+      - name: GF_PATHS_DATA
+        value: /var/lib/grafana/
+      - name: GF_PATHS_LOGS
+        value: /var/log/grafana
+      - name: GF_PATHS_PLUGINS
+        value: /var/lib/grafana/plugins
+      - name: GF_PATHS_PROVISIONING
+        value: /etc/grafana/provisioning
+      image: docker.io/grafana/grafana:12.2.1
+      imagePullPolicy: IfNotPresent
+      livenessProbe:
+        failureThreshold: 10
+        httpGet:
+          path: /api/health
+          port: 3000
+          scheme: HTTP
+        initialDelaySeconds: 60
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 30
+      name: grafana
+      ports:
+      - containerPort: 3000
+        name: grafana
+        protocol: TCP
+      - containerPort: 9094
+        name: gossip-tcp
+        protocol: TCP
+      - containerPort: 9094
+        name: gossip-udp
+        protocol: UDP
+      - containerPort: 6060
+        name: profiling
+        protocol: TCP
+      readinessProbe:
+        failureThreshold: 3
+        httpGet:
+          path: /api/health
+          port: 3000
+          scheme: HTTP
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 1
+      resources: {}
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        seccompProfile:
+          type: RuntimeDefault
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /etc/grafana/grafana.ini
+        name: config
+        subPath: grafana.ini
+      - mountPath: /var/lib/grafana
+        name: storage
+      - mountPath: /tmp/dashboards
+        name: sc-dashboard-volume
+      - mountPath: /etc/grafana/provisioning/dashboards/sc-dashboardproviders.yaml
+        name: sc-dashboard-provider
+        subPath: provider.yaml
+      - mountPath: /etc/grafana/provisioning/datasources
+        name: sc-datasources-volume
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-rz897
+        readOnly: true
+    dnsPolicy: ClusterFirst
+    enableServiceLinks: true
+    nodeName: mobin-log-backup-able
+    preemptionPolicy: PreemptLowerPriority
+    priority: 0
+    restartPolicy: Always
+    schedulerName: default-scheduler
+    securityContext:
+      fsGroup: 472
+      runAsGroup: 472
+      runAsNonRoot: true
+      runAsUser: 472
+    serviceAccount: prometheus-grafana
+    serviceAccountName: prometheus-grafana
+    shareProcessNamespace: false
+    terminationGracePeriodSeconds: 30
+    tolerations:
+    - effect: NoExecute
+      key: node.kubernetes.io/not-ready
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoExecute
+      key: node.kubernetes.io/unreachable
+      operator: Exists
+      tolerationSeconds: 300
+    volumes:
+    - configMap:
+        defaultMode: 420
+        name: prometheus-grafana
+      name: config
+    - emptyDir: {}
+      name: storage
+    - emptyDir: {}
+      name: sc-dashboard-volume
+    - configMap:
+        defaultMode: 420
+        name: prometheus-grafana-config-dashboards
+      name: sc-dashboard-provider
+    - emptyDir: {}
+      name: sc-datasources-volume
+    - name: kube-api-access-rz897
+      projected:
+        defaultMode: 420
+        sources:
+        - serviceAccountToken:
+            expirationSeconds: 3607
+            path: token
+        - configMap:
+            items:
+            - key: ca.crt
+              path: ca.crt
+            name: kube-root-ca.crt
+        - downwardAPI:
+            items:
+            - fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+              path: namespace
+  status:
+    conditions:
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-08T11:00:37Z"
+      message: 'The node was low on resource: ephemeral-storage. Threshold quantity:
+        1473883772, available: 3049432Ki. Container grafana was using 396Ki, request
+        is 0, has larger consumption of ephemeral-storage. Container grafana-sc-dashboard
+        was using 48Ki, request is 0, has larger consumption of ephemeral-storage.
+        Container grafana-sc-datasources was using 40Ki, request is 0, has larger
+        consumption of ephemeral-storage. '
+      reason: TerminationByKubelet
+      status: "True"
+      type: DisruptionTarget
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-08T11:00:37Z"
+      status: "False"
+      type: PodReadyToStartContainers
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-07T19:25:29Z"
+      status: "True"
+      type: Initialized
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-08T11:00:37Z"
+      reason: PodFailed
+      status: "False"
+      type: Ready
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-08T11:00:37Z"
+      reason: PodFailed
+      status: "False"
+      type: ContainersReady
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-07T19:25:29Z"
+      status: "True"
+      type: PodScheduled
+    containerStatuses:
+    - image: docker.io/grafana/grafana:12.2.1
+      imageID: ""
+      lastState:
+        terminated:
+          exitCode: 137
+          finishedAt: null
+          message: The container could not be located when the pod was deleted.  The
+            container used to be Running
+          reason: ContainerStatusUnknown
+          startedAt: null
+      name: grafana
+      ready: false
+      restartCount: 1
+      started: false
+      state:
+        terminated:
+          exitCode: 137
+          finishedAt: null
+          message: The container could not be located when the pod was terminated
+          reason: ContainerStatusUnknown
+          startedAt: null
+      volumeMounts:
+      - mountPath: /etc/grafana/grafana.ini
+        name: config
+      - mountPath: /var/lib/grafana
+        name: storage
+      - mountPath: /tmp/dashboards
+        name: sc-dashboard-volume
+      - mountPath: /etc/grafana/provisioning/dashboards/sc-dashboardproviders.yaml
+        name: sc-dashboard-provider
+      - mountPath: /etc/grafana/provisioning/datasources
+        name: sc-datasources-volume
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-rz897
+        readOnly: true
+        recursiveReadOnly: Disabled
+    - image: quay.io/kiwigrid/k8s-sidecar:1.30.10
+      imageID: ""
+      lastState:
+        terminated:
+          exitCode: 137
+          finishedAt: null
+          message: The container could not be located when the pod was deleted.  The
+            container used to be Running
+          reason: ContainerStatusUnknown
+          startedAt: null
+      name: grafana-sc-dashboard
+      ready: false
+      restartCount: 1
+      started: false
+      state:
+        terminated:
+          exitCode: 137
+          finishedAt: null
+          message: The container could not be located when the pod was terminated
+          reason: ContainerStatusUnknown
+          startedAt: null
+      volumeMounts:
+      - mountPath: /tmp/dashboards
+        name: sc-dashboard-volume
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-rz897
+        readOnly: true
+        recursiveReadOnly: Disabled
+    - image: quay.io/kiwigrid/k8s-sidecar:1.30.10
+      imageID: ""
+      lastState:
+        terminated:
+          exitCode: 137
+          finishedAt: null
+          message: The container could not be located when the pod was deleted.  The
+            container used to be Running
+          reason: ContainerStatusUnknown
+          startedAt: null
+      name: grafana-sc-datasources
+      ready: false
+      restartCount: 1
+      started: false
+      state:
+        terminated:
+          exitCode: 137
+          finishedAt: null
+          message: The container could not be located when the pod was terminated
+          reason: ContainerStatusUnknown
+          startedAt: null
+      volumeMounts:
+      - mountPath: /etc/grafana/provisioning/datasources
+        name: sc-datasources-volume
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-rz897
+        readOnly: true
+        recursiveReadOnly: Disabled
+    hostIP: 10.33.3.42
+    hostIPs:
+    - ip: 10.33.3.42
+    message: 'The node was low on resource: ephemeral-storage. Threshold quantity:
+      1473883772, available: 3049432Ki. Container grafana was using 396Ki, request
+      is 0, has larger consumption of ephemeral-storage. Container grafana-sc-dashboard
+      was using 48Ki, request is 0, has larger consumption of ephemeral-storage. Container
+      grafana-sc-datasources was using 40Ki, request is 0, has larger consumption
+      of ephemeral-storage. '
+    phase: Failed
+    podIP: 10.42.0.127
+    podIPs:
+    - ip: 10.42.0.127
+    qosClass: BestEffort
+    reason: Evicted
+    startTime: "2025-11-07T19:25:29Z"
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    creationTimestamp: "2025-11-07T19:25:29Z"
+    generateName: prometheus-kube-prometheus-operator-644c4f8c94-
+    generation: 1
+    labels:
+      app: kube-prometheus-stack-operator
+      app.kubernetes.io/component: prometheus-operator
+      app.kubernetes.io/instance: prometheus
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/name: kube-prometheus-stack-prometheus-operator
+      app.kubernetes.io/part-of: kube-prometheus-stack
+      app.kubernetes.io/version: 79.4.0
+      chart: kube-prometheus-stack-79.4.0
+      heritage: Helm
+      pod-template-hash: 644c4f8c94
+      release: prometheus
+    name: prometheus-kube-prometheus-operator-644c4f8c94-wblqt
+    namespace: monitoring
+    ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: ReplicaSet
+      name: prometheus-kube-prometheus-operator-644c4f8c94
+      uid: 3cc017dd-4be9-4d17-9bc6-9b716324789e
+    resourceVersion: "71361"
+    uid: 3a1f9b56-e1d2-41a5-99dd-b462544d71d5
+  spec:
+    automountServiceAccountToken: true
+    containers:
+    - args:
+      - --kubelet-service=kube-system/prometheus-kube-prometheus-kubelet
+      - --kubelet-endpoints=true
+      - --kubelet-endpointslice=false
+      - --localhost=127.0.0.1
+      - --prometheus-config-reloader=quay.io/prometheus-operator/prometheus-config-reloader:v0.86.2
+      - --config-reloader-cpu-request=0
+      - --config-reloader-cpu-limit=0
+      - --config-reloader-memory-request=0
+      - --config-reloader-memory-limit=0
+      - --thanos-default-base-image=quay.io/thanos/thanos:v0.40.1
+      - --secret-field-selector=type!=kubernetes.io/dockercfg,type!=kubernetes.io/service-account-token,type!=helm.sh/release.v1
+      - --web.enable-tls=true
+      - --web.cert-file=/cert/cert
+      - --web.key-file=/cert/key
+      - --web.listen-address=:10250
+      - --web.tls-min-version=VersionTLS13
+      env:
+      - name: GOGC
+        value: "30"
+      image: quay.io/prometheus-operator/prometheus-operator:v0.86.2
+      imagePullPolicy: IfNotPresent
+      livenessProbe:
+        failureThreshold: 3
+        httpGet:
+          path: /healthz
+          port: https
+          scheme: HTTPS
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 1
+      name: kube-prometheus-stack
+      ports:
+      - containerPort: 10250
+        name: https
+        protocol: TCP
+      readinessProbe:
+        failureThreshold: 3
+        httpGet:
+          path: /healthz
+          port: https
+          scheme: HTTPS
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 1
+      resources: {}
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        readOnlyRootFilesystem: true
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /cert
+        name: tls-secret
+        readOnly: true
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-jdh74
+        readOnly: true
+    dnsPolicy: ClusterFirst
+    enableServiceLinks: true
+    nodeName: mobin-log-backup-able
+    preemptionPolicy: PreemptLowerPriority
+    priority: 0
+    restartPolicy: Always
+    schedulerName: default-scheduler
+    securityContext:
+      fsGroup: 65534
+      runAsGroup: 65534
+      runAsNonRoot: true
+      runAsUser: 65534
+      seccompProfile:
+        type: RuntimeDefault
+    serviceAccount: prometheus-kube-prometheus-operator
+    serviceAccountName: prometheus-kube-prometheus-operator
+    terminationGracePeriodSeconds: 30
+    tolerations:
+    - effect: NoExecute
+      key: node.kubernetes.io/not-ready
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoExecute
+      key: node.kubernetes.io/unreachable
+      operator: Exists
+      tolerationSeconds: 300
+    volumes:
+    - name: tls-secret
+      secret:
+        defaultMode: 420
+        secretName: prometheus-kube-prometheus-admission
+    - name: kube-api-access-jdh74
+      projected:
+        defaultMode: 420
+        sources:
+        - serviceAccountToken:
+            expirationSeconds: 3607
+            path: token
+        - configMap:
+            items:
+            - key: ca.crt
+              path: ca.crt
+            name: kube-root-ca.crt
+        - downwardAPI:
+            items:
+            - fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+              path: namespace
+  status:
+    conditions:
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-07T19:25:36Z"
+      status: "True"
+      type: PodReadyToStartContainers
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-07T19:25:29Z"
+      status: "True"
+      type: Initialized
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-07T19:25:36Z"
+      status: "True"
+      type: Ready
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-07T19:25:36Z"
+      status: "True"
+      type: ContainersReady
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-07T19:25:29Z"
+      status: "True"
+      type: PodScheduled
+    containerStatuses:
+    - containerID: containerd://da5d20100bd54185d3fb7dbe9d0139890fcedcf687fe634b9f55f076909bf2c3
+      image: quay.io/prometheus-operator/prometheus-operator:v0.86.2
+      imageID: quay.io/prometheus-operator/prometheus-operator@sha256:92757e4b90027e153dc09f2e01254c8402fd5268827d95532760836c2a117062
+      lastState: {}
+      name: kube-prometheus-stack
+      ready: true
+      resources: {}
+      restartCount: 0
+      started: true
+      state:
+        running:
+          startedAt: "2025-11-07T19:25:36Z"
+      user:
+        linux:
+          gid: 65534
+          supplementalGroups:
+          - 65534
+          uid: 65534
+      volumeMounts:
+      - mountPath: /cert
+        name: tls-secret
+        readOnly: true
+        recursiveReadOnly: Disabled
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-jdh74
+        readOnly: true
+        recursiveReadOnly: Disabled
+    hostIP: 10.33.3.42
+    hostIPs:
+    - ip: 10.33.3.42
+    phase: Running
+    podIP: 10.42.0.129
+    podIPs:
+    - ip: 10.42.0.129
+    qosClass: BestEffort
+    startTime: "2025-11-07T19:25:29Z"
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    creationTimestamp: "2025-11-07T19:25:29Z"
+    generateName: prometheus-kube-state-metrics-f7d8f5f9b-
+    generation: 1
+    labels:
+      app.kubernetes.io/component: metrics
+      app.kubernetes.io/instance: prometheus
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/name: kube-state-metrics
+      app.kubernetes.io/part-of: kube-state-metrics
+      app.kubernetes.io/version: 2.17.0
+      helm.sh/chart: kube-state-metrics-6.4.1
+      pod-template-hash: f7d8f5f9b
+      release: prometheus
+    name: prometheus-kube-state-metrics-f7d8f5f9b-sndzr
+    namespace: monitoring
+    ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: ReplicaSet
+      name: prometheus-kube-state-metrics-f7d8f5f9b
+      uid: f6cef8aa-06c9-4a2b-9319-bc7ce26ca2ae
+    resourceVersion: "71458"
+    uid: 34b2f14a-7df0-4563-b55d-21054a543434
+  spec:
+    automountServiceAccountToken: true
+    containers:
+    - args:
+      - --port=8080
+      - --resources=certificatesigningrequests,configmaps,cronjobs,daemonsets,deployments,endpoints,horizontalpodautoscalers,ingresses,jobs,leases,limitranges,mutatingwebhookconfigurations,namespaces,networkpolicies,nodes,persistentvolumeclaims,persistentvolumes,poddisruptionbudgets,pods,replicasets,replicationcontrollers,resourcequotas,secrets,services,statefulsets,storageclasses,validatingwebhookconfigurations,volumeattachments
+      image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.17.0
+      imagePullPolicy: IfNotPresent
+      livenessProbe:
+        failureThreshold: 3
+        httpGet:
+          path: /livez
+          port: 8080
+          scheme: HTTP
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 5
+      name: kube-state-metrics
+      ports:
+      - containerPort: 8080
+        name: http
+        protocol: TCP
+      readinessProbe:
+        failureThreshold: 3
+        httpGet:
+          path: /readyz
+          port: 8081
+          scheme: HTTP
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 5
+      resources: {}
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        readOnlyRootFilesystem: true
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-2ngzg
+        readOnly: true
+    dnsPolicy: ClusterFirst
+    enableServiceLinks: true
+    nodeName: mobin-log-backup-able
+    preemptionPolicy: PreemptLowerPriority
+    priority: 0
+    restartPolicy: Always
+    schedulerName: default-scheduler
+    securityContext:
+      fsGroup: 65534
+      runAsGroup: 65534
+      runAsNonRoot: true
+      runAsUser: 65534
+      seccompProfile:
+        type: RuntimeDefault
+    serviceAccount: prometheus-kube-state-metrics
+    serviceAccountName: prometheus-kube-state-metrics
+    terminationGracePeriodSeconds: 30
+    tolerations:
+    - effect: NoExecute
+      key: node.kubernetes.io/not-ready
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoExecute
+      key: node.kubernetes.io/unreachable
+      operator: Exists
+      tolerationSeconds: 300
+    volumes:
+    - name: kube-api-access-2ngzg
+      projected:
+        defaultMode: 420
+        sources:
+        - serviceAccountToken:
+            expirationSeconds: 3607
+            path: token
+        - configMap:
+            items:
+            - key: ca.crt
+              path: ca.crt
+            name: kube-root-ca.crt
+        - downwardAPI:
+            items:
+            - fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+              path: namespace
+  status:
+    conditions:
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-07T19:25:36Z"
+      status: "True"
+      type: PodReadyToStartContainers
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-07T19:25:29Z"
+      status: "True"
+      type: Initialized
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-07T19:25:48Z"
+      status: "True"
+      type: Ready
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-07T19:25:48Z"
+      status: "True"
+      type: ContainersReady
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-07T19:25:29Z"
+      status: "True"
+      type: PodScheduled
+    containerStatuses:
+    - containerID: containerd://f0457fe52c2b4f1e1206f2b9c0329f4f6c950ac99f94c9eb17d756e38237ebde
+      image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.17.0
+      imageID: registry.k8s.io/kube-state-metrics/kube-state-metrics@sha256:2bbc915567334b13632bf62c0a97084aff72a36e13c4dabd5f2f11c898c5bacd
+      lastState: {}
+      name: kube-state-metrics
+      ready: true
+      resources: {}
+      restartCount: 0
+      started: true
+      state:
+        running:
+          startedAt: "2025-11-07T19:25:35Z"
+      user:
+        linux:
+          gid: 65534
+          supplementalGroups:
+          - 65534
+          uid: 65534
+      volumeMounts:
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-2ngzg
+        readOnly: true
+        recursiveReadOnly: Disabled
+    hostIP: 10.33.3.42
+    hostIPs:
+    - ip: 10.33.3.42
+    phase: Running
+    podIP: 10.42.0.128
+    podIPs:
+    - ip: 10.42.0.128
+    qosClass: BestEffort
+    startTime: "2025-11-07T19:25:29Z"
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/default-container: prometheus
+    creationTimestamp: "2025-11-08T11:00:24Z"
+    generateName: prometheus-prometheus-kube-prometheus-prometheus-
+    generation: 1
+    labels:
+      app.kubernetes.io/instance: prometheus-kube-prometheus-prometheus
+      app.kubernetes.io/managed-by: prometheus-operator
+      app.kubernetes.io/name: prometheus
+      app.kubernetes.io/version: 3.7.3
+      apps.kubernetes.io/pod-index: "0"
+      controller-revision-hash: prometheus-prometheus-kube-prometheus-prometheus-5795957654
+      operator.prometheus.io/name: prometheus-kube-prometheus-prometheus
+      operator.prometheus.io/shard: "0"
+      prometheus: prometheus-kube-prometheus-prometheus
+      statefulset.kubernetes.io/pod-name: prometheus-prometheus-kube-prometheus-prometheus-0
+    name: prometheus-prometheus-kube-prometheus-prometheus-0
+    namespace: monitoring
+    ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: StatefulSet
+      name: prometheus-prometheus-kube-prometheus-prometheus
+      uid: 37d6d13f-7a29-44f7-a568-9745c9883c3b
+    resourceVersion: "152917"
+    uid: 91944a14-7530-4017-ad79-d049bc65a496
+  spec:
+    affinity:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+        - podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                - prometheus
+              - key: app.kubernetes.io/instance
+                operator: In
+                values:
+                - prometheus-kube-prometheus-prometheus
+            topologyKey: kubernetes.io/hostname
+          weight: 100
+    automountServiceAccountToken: true
+    containers:
+    - args:
+      - --config.file=/etc/prometheus/config_out/prometheus.env.yaml
+      - --web.enable-lifecycle
+      - --web.external-url=http://prometheus-kube-prometheus-prometheus.monitoring:9090
+      - --web.route-prefix=/
+      - --storage.tsdb.retention.time=10d
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.wal-compression
+      - --web.config.file=/etc/prometheus/web_config/web-config.yaml
+      image: quay.io/prometheus/prometheus:v3.7.3
+      imagePullPolicy: IfNotPresent
+      livenessProbe:
+        failureThreshold: 6
+        httpGet:
+          path: /-/healthy
+          port: http-web
+          scheme: HTTP
+        periodSeconds: 5
+        successThreshold: 1
+        timeoutSeconds: 3
+      name: prometheus
+      ports:
+      - containerPort: 9090
+        name: http-web
+        protocol: TCP
+      readinessProbe:
+        failureThreshold: 3
+        httpGet:
+          path: /-/ready
+          port: http-web
+          scheme: HTTP
+        periodSeconds: 5
+        successThreshold: 1
+        timeoutSeconds: 3
+      resources: {}
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        readOnlyRootFilesystem: true
+      startupProbe:
+        failureThreshold: 60
+        httpGet:
+          path: /-/ready
+          port: http-web
+          scheme: HTTP
+        periodSeconds: 15
+        successThreshold: 1
+        timeoutSeconds: 3
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: FallbackToLogsOnError
+      volumeMounts:
+      - mountPath: /etc/prometheus/config_out
+        name: config-out
+        readOnly: true
+      - mountPath: /etc/prometheus/certs
+        name: tls-assets
+        readOnly: true
+      - mountPath: /prometheus
+        name: prometheus-prometheus-kube-prometheus-prometheus-db
+      - mountPath: /etc/prometheus/rules/prometheus-prometheus-kube-prometheus-prometheus-rulefiles-0
+        name: prometheus-prometheus-kube-prometheus-prometheus-rulefiles-0
+      - mountPath: /etc/prometheus/web_config/web-config.yaml
+        name: web-config
+        readOnly: true
+        subPath: web-config.yaml
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-sfd62
+        readOnly: true
+    - args:
+      - --listen-address=:8080
+      - --reload-url=http://127.0.0.1:9090/-/reload
+      - --config-file=/etc/prometheus/config/prometheus.yaml.gz
+      - --config-envsubst-file=/etc/prometheus/config_out/prometheus.env.yaml
+      - --watched-dir=/etc/prometheus/rules/prometheus-prometheus-kube-prometheus-prometheus-rulefiles-0
+      command:
+      - /bin/prometheus-config-reloader
+      env:
+      - name: POD_NAME
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.name
+      - name: SHARD
+        value: "0"
+      image: quay.io/prometheus-operator/prometheus-config-reloader:v0.86.2
+      imagePullPolicy: IfNotPresent
+      name: config-reloader
+      ports:
+      - containerPort: 8080
+        name: reloader-web
+        protocol: TCP
+      resources: {}
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        readOnlyRootFilesystem: true
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: FallbackToLogsOnError
+      volumeMounts:
+      - mountPath: /etc/prometheus/config
+        name: config
+      - mountPath: /etc/prometheus/config_out
+        name: config-out
+      - mountPath: /etc/prometheus/rules/prometheus-prometheus-kube-prometheus-prometheus-rulefiles-0
+        name: prometheus-prometheus-kube-prometheus-prometheus-rulefiles-0
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-sfd62
+        readOnly: true
+    dnsPolicy: ClusterFirst
+    enableServiceLinks: true
+    hostname: prometheus-prometheus-kube-prometheus-prometheus-0
+    initContainers:
+    - args:
+      - --watch-interval=0
+      - --listen-address=:8081
+      - --config-file=/etc/prometheus/config/prometheus.yaml.gz
+      - --config-envsubst-file=/etc/prometheus/config_out/prometheus.env.yaml
+      - --watched-dir=/etc/prometheus/rules/prometheus-prometheus-kube-prometheus-prometheus-rulefiles-0
+      command:
+      - /bin/prometheus-config-reloader
+      env:
+      - name: POD_NAME
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.name
+      - name: SHARD
+        value: "0"
+      image: quay.io/prometheus-operator/prometheus-config-reloader:v0.86.2
+      imagePullPolicy: IfNotPresent
+      name: init-config-reloader
+      ports:
+      - containerPort: 8081
+        name: reloader-init
+        protocol: TCP
+      resources: {}
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        readOnlyRootFilesystem: true
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: FallbackToLogsOnError
+      volumeMounts:
+      - mountPath: /etc/prometheus/config
+        name: config
+      - mountPath: /etc/prometheus/config_out
+        name: config-out
+      - mountPath: /etc/prometheus/rules/prometheus-prometheus-kube-prometheus-prometheus-rulefiles-0
+        name: prometheus-prometheus-kube-prometheus-prometheus-rulefiles-0
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-sfd62
+        readOnly: true
+    nodeName: mobin-log-backup-able
+    preemptionPolicy: PreemptLowerPriority
+    priority: 0
+    restartPolicy: Always
+    schedulerName: default-scheduler
+    securityContext:
+      fsGroup: 2000
+      runAsGroup: 2000
+      runAsNonRoot: true
+      runAsUser: 1000
+      seccompProfile:
+        type: RuntimeDefault
+    serviceAccount: prometheus-kube-prometheus-prometheus
+    serviceAccountName: prometheus-kube-prometheus-prometheus
+    shareProcessNamespace: false
+    subdomain: prometheus-operated
+    terminationGracePeriodSeconds: 600
+    tolerations:
+    - effect: NoExecute
+      key: node.kubernetes.io/not-ready
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoExecute
+      key: node.kubernetes.io/unreachable
+      operator: Exists
+      tolerationSeconds: 300
+    volumes:
+    - name: config
+      secret:
+        defaultMode: 420
+        secretName: prometheus-prometheus-kube-prometheus-prometheus
+    - name: tls-assets
+      projected:
+        defaultMode: 420
+        sources:
+        - secret:
+            name: prometheus-prometheus-kube-prometheus-prometheus-tls-assets-0
+    - emptyDir:
+        medium: Memory
+      name: config-out
+    - configMap:
+        defaultMode: 420
+        name: prometheus-prometheus-kube-prometheus-prometheus-rulefiles-0
+      name: prometheus-prometheus-kube-prometheus-prometheus-rulefiles-0
+    - name: web-config
+      secret:
+        defaultMode: 420
+        secretName: prometheus-prometheus-kube-prometheus-prometheus-web-config
+    - emptyDir: {}
+      name: prometheus-prometheus-kube-prometheus-prometheus-db
+    - name: kube-api-access-sfd62
+      projected:
+        defaultMode: 420
+        sources:
+        - serviceAccountToken:
+            expirationSeconds: 3607
+            path: token
+        - configMap:
+            items:
+            - key: ca.crt
+              path: ca.crt
+            name: kube-root-ca.crt
+        - downwardAPI:
+            items:
+            - fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+              path: namespace
+  status:
+    conditions:
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-08T11:05:50Z"
+      status: "True"
+      type: PodReadyToStartContainers
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-08T11:05:50Z"
+      status: "True"
+      type: Initialized
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-08T11:06:04Z"
+      status: "True"
+      type: Ready
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-08T11:06:04Z"
+      status: "True"
+      type: ContainersReady
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-08T11:05:48Z"
+      status: "True"
+      type: PodScheduled
+    containerStatuses:
+    - containerID: containerd://d1d2beebdc151ed96e9b5d2b4a6d98dd249fa6a57e6aebcf2644d0394d83b87c
+      image: quay.io/prometheus-operator/prometheus-config-reloader:v0.86.2
+      imageID: quay.io/prometheus-operator/prometheus-config-reloader@sha256:44dd821cb3dd26698c3e97b10dc22ec5707afe6126b5912dc11b169394bf2ef7
+      lastState: {}
+      name: config-reloader
+      ready: true
+      resources: {}
+      restartCount: 0
+      started: true
+      state:
+        running:
+          startedAt: "2025-11-08T11:06:03Z"
+      user:
+        linux:
+          gid: 2000
+          supplementalGroups:
+          - 2000
+          uid: 1000
+      volumeMounts:
+      - mountPath: /etc/prometheus/config
+        name: config
+      - mountPath: /etc/prometheus/config_out
+        name: config-out
+      - mountPath: /etc/prometheus/rules/prometheus-prometheus-kube-prometheus-prometheus-rulefiles-0
+        name: prometheus-prometheus-kube-prometheus-prometheus-rulefiles-0
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-sfd62
+        readOnly: true
+        recursiveReadOnly: Disabled
+    - containerID: containerd://5608c18903b746748a9bb8f1d65d91104b0a08a8b3225ff4dfde1b00657061d7
+      image: quay.io/prometheus/prometheus:v3.7.3
+      imageID: quay.io/prometheus/prometheus@sha256:49214755b6153f90a597adcbff0252cc61069f8ab69ce8411285cd4a560e8038
+      lastState: {}
+      name: prometheus
+      ready: true
+      resources: {}
+      restartCount: 0
+      started: true
+      state:
+        running:
+          startedAt: "2025-11-08T11:06:03Z"
+      user:
+        linux:
+          gid: 2000
+          supplementalGroups:
+          - 2000
+          uid: 1000
+      volumeMounts:
+      - mountPath: /etc/prometheus/config_out
+        name: config-out
+        readOnly: true
+        recursiveReadOnly: Disabled
+      - mountPath: /etc/prometheus/certs
+        name: tls-assets
+        readOnly: true
+        recursiveReadOnly: Disabled
+      - mountPath: /prometheus
+        name: prometheus-prometheus-kube-prometheus-prometheus-db
+      - mountPath: /etc/prometheus/rules/prometheus-prometheus-kube-prometheus-prometheus-rulefiles-0
+        name: prometheus-prometheus-kube-prometheus-prometheus-rulefiles-0
+      - mountPath: /etc/prometheus/web_config/web-config.yaml
+        name: web-config
+        readOnly: true
+        recursiveReadOnly: Disabled
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-sfd62
+        readOnly: true
+        recursiveReadOnly: Disabled
+    hostIP: 10.33.3.42
+    hostIPs:
+    - ip: 10.33.3.42
+    initContainerStatuses:
+    - containerID: containerd://17d175263f46136de6336a620170ff867b13b8593fc216572d7463c76630f56c
+      image: quay.io/prometheus-operator/prometheus-config-reloader:v0.86.2
+      imageID: quay.io/prometheus-operator/prometheus-config-reloader@sha256:44dd821cb3dd26698c3e97b10dc22ec5707afe6126b5912dc11b169394bf2ef7
+      lastState: {}
+      name: init-config-reloader
+      ready: true
+      resources: {}
+      restartCount: 0
+      started: false
+      state:
+        terminated:
+          containerID: containerd://17d175263f46136de6336a620170ff867b13b8593fc216572d7463c76630f56c
+          exitCode: 0
+          finishedAt: "2025-11-08T11:05:50Z"
+          reason: Completed
+          startedAt: "2025-11-08T11:05:49Z"
+      user:
+        linux:
+          gid: 2000
+          supplementalGroups:
+          - 2000
+          uid: 1000
+      volumeMounts:
+      - mountPath: /etc/prometheus/config
+        name: config
+      - mountPath: /etc/prometheus/config_out
+        name: config-out
+      - mountPath: /etc/prometheus/rules/prometheus-prometheus-kube-prometheus-prometheus-rulefiles-0
+        name: prometheus-prometheus-kube-prometheus-prometheus-rulefiles-0
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-sfd62
+        readOnly: true
+        recursiveReadOnly: Disabled
+    phase: Running
+    podIP: 10.42.0.207
+    podIPs:
+    - ip: 10.42.0.207
+    qosClass: BestEffort
+    startTime: "2025-11-08T11:05:49Z"
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    annotations:
+      cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+    creationTimestamp: "2025-11-07T19:29:32Z"
+    generateName: prometheus-prometheus-node-exporter-
+    generation: 1
+    labels:
+      app.kubernetes.io/component: metrics
+      app.kubernetes.io/instance: prometheus
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/name: prometheus-node-exporter
+      app.kubernetes.io/part-of: prometheus-node-exporter
+      app.kubernetes.io/version: 1.10.2
+      controller-revision-hash: 575d5cc858
+      helm.sh/chart: prometheus-node-exporter-4.49.1
+      jobLabel: node-exporter
+      pod-template-generation: "1"
+      release: prometheus
+    name: prometheus-prometheus-node-exporter-ml5r7
+    namespace: monitoring
+    ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: DaemonSet
+      name: prometheus-prometheus-node-exporter
+      uid: 1c7b9c76-fe7a-45f1-8c04-00eaeac62828
+    resourceVersion: "71936"
+    uid: 4484f7b7-ce21-45fe-892f-9e25e16c2430
+  spec:
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+          - matchFields:
+            - key: metadata.name
+              operator: In
+              values:
+              - mobin-log-backup-able
+    automountServiceAccountToken: false
+    containers:
+    - args:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/host/root
+      - --path.udev.data=/host/root/run/udev/data
+      - --web.listen-address=[$(HOST_IP)]:9100
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|var/lib/kubelet/.+)($|/)
+      - --collector.filesystem.fs-types-exclude=^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs|erofs)$
+      env:
+      - name: HOST_IP
+        value: 0.0.0.0
+      image: quay.io/prometheus/node-exporter:v1.10.2
+      imagePullPolicy: IfNotPresent
+      livenessProbe:
+        failureThreshold: 3
+        httpGet:
+          path: /
+          port: http-metrics
+          scheme: HTTP
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 1
+      name: node-exporter
+      ports:
+      - containerPort: 9100
+        hostPort: 9100
+        name: http-metrics
+        protocol: TCP
+      readinessProbe:
+        failureThreshold: 3
+        httpGet:
+          path: /
+          port: http-metrics
+          scheme: HTTP
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 1
+      resources: {}
+      securityContext:
+        readOnlyRootFilesystem: true
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /host/proc
+        name: proc
+        readOnly: true
+      - mountPath: /host/sys
+        name: sys
+        readOnly: true
+      - mountPath: /host/root
+        mountPropagation: HostToContainer
+        name: root
+        readOnly: true
+    dnsPolicy: ClusterFirst
+    enableServiceLinks: true
+    hostNetwork: true
+    hostPID: true
+    nodeName: mobin-log-backup-able
+    nodeSelector:
+      kubernetes.io/os: linux
+    preemptionPolicy: PreemptLowerPriority
+    priority: 0
+    restartPolicy: Always
+    schedulerName: default-scheduler
+    securityContext:
+      fsGroup: 65534
+      runAsGroup: 65534
+      runAsNonRoot: true
+      runAsUser: 65534
+    serviceAccount: prometheus-prometheus-node-exporter
+    serviceAccountName: prometheus-prometheus-node-exporter
+    terminationGracePeriodSeconds: 30
+    tolerations:
+    - effect: NoSchedule
+      operator: Exists
+    - effect: NoExecute
+      key: node.kubernetes.io/not-ready
+      operator: Exists
+    - effect: NoExecute
+      key: node.kubernetes.io/unreachable
+      operator: Exists
+    - effect: NoSchedule
+      key: node.kubernetes.io/disk-pressure
+      operator: Exists
+    - effect: NoSchedule
+      key: node.kubernetes.io/memory-pressure
+      operator: Exists
+    - effect: NoSchedule
+      key: node.kubernetes.io/pid-pressure
+      operator: Exists
+    - effect: NoSchedule
+      key: node.kubernetes.io/unschedulable
+      operator: Exists
+    - effect: NoSchedule
+      key: node.kubernetes.io/network-unavailable
+      operator: Exists
+    volumes:
+    - hostPath:
+        path: /proc
+        type: ""
+      name: proc
+    - hostPath:
+        path: /sys
+        type: ""
+      name: sys
+    - hostPath:
+        path: /
+        type: ""
+      name: root
+  status:
+    conditions:
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-07T19:29:33Z"
+      status: "True"
+      type: PodReadyToStartContainers
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-07T19:29:32Z"
+      status: "True"
+      type: Initialized
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-07T19:29:33Z"
+      status: "True"
+      type: Ready
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-07T19:29:33Z"
+      status: "True"
+      type: ContainersReady
+    - lastProbeTime: null
+      lastTransitionTime: "2025-11-07T19:29:32Z"
+      status: "True"
+      type: PodScheduled
+    containerStatuses:
+    - containerID: containerd://4f05bd7b6fc565e7694e9fd9a66248a09ffce58a53dc20380ac0284177895d51
+      image: quay.io/prometheus/node-exporter:v1.10.2
+      imageID: quay.io/prometheus/node-exporter@sha256:337ff1d356b68d39cef853e8c6345de11ce7556bb34cda8bd205bcf2ed30b565
+      lastState: {}
+      name: node-exporter
+      ready: true
+      resources: {}
+      restartCount: 0
+      started: true
+      state:
+        running:
+          startedAt: "2025-11-07T19:29:32Z"
+      user:
+        linux:
+          gid: 65534
+          supplementalGroups:
+          - 65534
+          uid: 65534
+      volumeMounts:
+      - mountPath: /host/proc
+        name: proc
+        readOnly: true
+        recursiveReadOnly: Disabled
+      - mountPath: /host/sys
+        name: sys
+        readOnly: true
+        recursiveReadOnly: Disabled
+      - mountPath: /host/root
+        name: root
+        readOnly: true
+        recursiveReadOnly: Disabled
+    hostIP: 10.33.3.42
+    hostIPs:
+    - ip: 10.33.3.42
+    phase: Running
+    podIP: 10.33.3.42
+    podIPs:
+    - ip: 10.33.3.42
+    qosClass: BestEffort
+    startTime: "2025-11-07T19:29:32Z"
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: "2025-11-07T19:25:36Z"
+    labels:
+      app.kubernetes.io/managed-by: prometheus-operator
+      managed-by: prometheus-operator
+      operated-alertmanager: "true"
+    name: alertmanager-operated
+    namespace: monitoring
+    ownerReferences:
+    - apiVersion: monitoring.coreos.com/v1
+      kind: Alertmanager
+      name: prometheus-kube-prometheus-alertmanager
+      uid: e9942311-90e2-4be7-a18c-ddc95e2030ce
+    resourceVersion: "71371"
+    uid: f254742c-4a16-4f22-98c2-fc12bfcf6520
+  spec:
+    clusterIP: None
+    clusterIPs:
+    - None
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: http-web
+      port: 9093
+      protocol: TCP
+      targetPort: http-web
+    - name: tcp-mesh
+      port: 9094
+      protocol: TCP
+      targetPort: mesh-tcp
+    - name: udp-mesh
+      port: 9094
+      protocol: UDP
+      targetPort: mesh-udp
+    publishNotReadyAddresses: true
+    selector:
+      app.kubernetes.io/name: alertmanager
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"name":"grafana","namespace":"monitoring"},"spec":{"ports":[{"port":3000,"targetPort":3000}],"selector":{"app":"grafana"},"type":"ClusterIP"}}
+    creationTimestamp: "2025-11-07T16:29:41Z"
+    name: grafana
+    namespace: monitoring
+    resourceVersion: "55378"
+    uid: 169cfc0c-c3f3-4101-a7c1-73426f198ff7
+  spec:
+    clusterIP: 10.43.215.86
+    clusterIPs:
+    - 10.43.215.86
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - port: 3000
+      protocol: TCP
+      targetPort: 3000
+    selector:
+      app: grafana
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"name":"kube-state-metrics","namespace":"monitoring"},"spec":{"ports":[{"port":8080,"targetPort":8080}],"selector":{"app":"kube-state-metrics"}}}
+    creationTimestamp: "2025-11-07T17:27:16Z"
+    name: kube-state-metrics
+    namespace: monitoring
+    resourceVersion: "60516"
+    uid: 4a1a772d-e18e-4630-9242-140679ecd0dd
+  spec:
+    clusterIP: 10.43.203.146
+    clusterIPs:
+    - 10.43.203.146
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - port: 8080
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      app: kube-state-metrics
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: prometheus
+      meta.helm.sh/release-namespace: monitoring
+    creationTimestamp: "2025-11-07T19:25:29Z"
+    labels:
+      app.kubernetes.io/instance: prometheus
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/name: grafana
+      app.kubernetes.io/version: 12.2.1
+      helm.sh/chart: grafana-10.1.4
+    name: prometheus-grafana
+    namespace: monitoring
+    resourceVersion: "71156"
+    uid: eb2815fa-4622-402e-a303-ae0aed817849
+  spec:
+    clusterIP: 10.43.110.0
+    clusterIPs:
+    - 10.43.110.0
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: http-web
+      port: 80
+      protocol: TCP
+      targetPort: grafana
+    selector:
+      app.kubernetes.io/instance: prometheus
+      app.kubernetes.io/name: grafana
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: prometheus
+      meta.helm.sh/release-namespace: monitoring
+    creationTimestamp: "2025-11-07T19:25:29Z"
+    labels:
+      app: kube-prometheus-stack-alertmanager
+      app.kubernetes.io/instance: prometheus
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/part-of: kube-prometheus-stack
+      app.kubernetes.io/version: 79.4.0
+      chart: kube-prometheus-stack-79.4.0
+      heritage: Helm
+      release: prometheus
+      self-monitor: "true"
+    name: prometheus-kube-prometheus-alertmanager
+    namespace: monitoring
+    resourceVersion: "71162"
+    uid: ed98166b-e289-4b6e-a581-e5241123ad07
+  spec:
+    clusterIP: 10.43.159.245
+    clusterIPs:
+    - 10.43.159.245
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: http-web
+      port: 9093
+      protocol: TCP
+      targetPort: 9093
+    - appProtocol: http
+      name: reloader-web
+      port: 8080
+      protocol: TCP
+      targetPort: reloader-web
+    selector:
+      alertmanager: prometheus-kube-prometheus-alertmanager
+      app.kubernetes.io/name: alertmanager
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: prometheus
+      meta.helm.sh/release-namespace: monitoring
+    creationTimestamp: "2025-11-07T19:25:29Z"
+    labels:
+      app: kube-prometheus-stack-operator
+      app.kubernetes.io/component: prometheus-operator
+      app.kubernetes.io/instance: prometheus
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/name: kube-prometheus-stack-prometheus-operator
+      app.kubernetes.io/part-of: kube-prometheus-stack
+      app.kubernetes.io/version: 79.4.0
+      chart: kube-prometheus-stack-79.4.0
+      heritage: Helm
+      release: prometheus
+    name: prometheus-kube-prometheus-operator
+    namespace: monitoring
+    resourceVersion: "71166"
+    uid: d312c32d-dc5e-4b27-a5cc-69b5ba3b1595
+  spec:
+    clusterIP: 10.43.115.191
+    clusterIPs:
+    - 10.43.115.191
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: https
+      port: 443
+      protocol: TCP
+      targetPort: https
+    selector:
+      app: kube-prometheus-stack-operator
+      release: prometheus
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: prometheus
+      meta.helm.sh/release-namespace: monitoring
+    creationTimestamp: "2025-11-07T19:25:29Z"
+    labels:
+      app: kube-prometheus-stack-prometheus
+      app.kubernetes.io/instance: prometheus
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/part-of: kube-prometheus-stack
+      app.kubernetes.io/version: 79.4.0
+      chart: kube-prometheus-stack-79.4.0
+      heritage: Helm
+      release: prometheus
+      self-monitor: "true"
+    name: prometheus-kube-prometheus-prometheus
+    namespace: monitoring
+    resourceVersion: "71172"
+    uid: 5c47f07b-2b25-4683-bbb9-6340d63252aa
+  spec:
+    clusterIP: 10.43.124.108
+    clusterIPs:
+    - 10.43.124.108
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: http-web
+      port: 9090
+      protocol: TCP
+      targetPort: 9090
+    - appProtocol: http
+      name: reloader-web
+      port: 8080
+      protocol: TCP
+      targetPort: reloader-web
+    selector:
+      app.kubernetes.io/name: prometheus
+      operator.prometheus.io/name: prometheus-kube-prometheus-prometheus
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: prometheus
+      meta.helm.sh/release-namespace: monitoring
+    creationTimestamp: "2025-11-07T19:25:29Z"
+    labels:
+      app.kubernetes.io/component: metrics
+      app.kubernetes.io/instance: prometheus
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/name: kube-state-metrics
+      app.kubernetes.io/part-of: kube-state-metrics
+      app.kubernetes.io/version: 2.17.0
+      helm.sh/chart: kube-state-metrics-6.4.1
+      release: prometheus
+    name: prometheus-kube-state-metrics
+    namespace: monitoring
+    resourceVersion: "71148"
+    uid: a10ddbb6-8403-4f8c-ab19-483fe7076780
+  spec:
+    clusterIP: 10.43.184.14
+    clusterIPs:
+    - 10.43.184.14
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: http
+    selector:
+      app.kubernetes.io/instance: prometheus
+      app.kubernetes.io/name: kube-state-metrics
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: "2025-11-07T19:25:36Z"
+    labels:
+      app.kubernetes.io/managed-by: prometheus-operator
+      managed-by: prometheus-operator
+      operated-prometheus: "true"
+    name: prometheus-operated
+    namespace: monitoring
+    ownerReferences:
+    - apiVersion: monitoring.coreos.com/v1
+      kind: Prometheus
+      name: prometheus-kube-prometheus-prometheus
+      uid: e70a4c82-9cd5-4b44-910e-f404b8ed3546
+    resourceVersion: "71391"
+    uid: 51c1a4cd-2259-4cfd-8c6a-37e99959f9e9
+  spec:
+    clusterIP: None
+    clusterIPs:
+    - None
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: http-web
+      port: 9090
+      protocol: TCP
+      targetPort: http-web
+    selector:
+      app.kubernetes.io/name: prometheus
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: prometheus
+      meta.helm.sh/release-namespace: monitoring
+      prometheus.io/scrape: "true"
+    creationTimestamp: "2025-11-07T19:25:29Z"
+    labels:
+      app.kubernetes.io/component: metrics
+      app.kubernetes.io/instance: prometheus
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/name: prometheus-node-exporter
+      app.kubernetes.io/part-of: prometheus-node-exporter
+      app.kubernetes.io/version: 1.10.2
+      helm.sh/chart: prometheus-node-exporter-4.49.1
+      jobLabel: node-exporter
+      release: prometheus
+    name: prometheus-prometheus-node-exporter
+    namespace: monitoring
+    resourceVersion: "71178"
+    uid: 1dfadfb2-276d-4d42-9043-ff62bca28523
+  spec:
+    clusterIP: 10.43.55.83
+    clusterIPs:
+    - 10.43.55.83
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: http-metrics
+      port: 9100
+      protocol: TCP
+      targetPort: 9100
+    selector:
+      app.kubernetes.io/instance: prometheus
+      app.kubernetes.io/name: prometheus-node-exporter
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"name":"prometheus-service","namespace":"monitoring"},"spec":{"ports":[{"port":9090,"protocol":"TCP","targetPort":9090}],"selector":{"app.kubernetes.io/name":"prometheus-kube-prometheus-prometheus"}}}
+    creationTimestamp: "2025-11-07T19:42:23Z"
+    name: prometheus-service
+    namespace: monitoring
+    resourceVersion: "73108"
+    uid: e9f5d5f8-870b-4cf9-9fc8-3cd02ce33a01
+  spec:
+    clusterIP: 10.43.221.16
+    clusterIPs:
+    - 10.43.221.16
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - port: 9090
+      protocol: TCP
+      targetPort: 9090
+    selector:
+      app.kubernetes.io/name: prometheus-kube-prometheus-prometheus
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"name":"prometheus-svc","namespace":"monitoring"},"spec":{"ports":[{"name":"web","port":9090,"targetPort":9090}],"selector":{"app.kubernetes.io/component":"prometheus","app.kubernetes.io/name":"prometheus"},"type":"ClusterIP"}}
+    creationTimestamp: "2025-11-07T19:37:22Z"
+    name: prometheus-svc
+    namespace: monitoring
+    resourceVersion: "72685"
+    uid: 948aaf90-4a5c-4e97-b98c-055d39faab68
+  spec:
+    clusterIP: 10.43.91.148
+    clusterIPs:
+    - 10.43.91.148
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: web
+      port: 9090
+      protocol: TCP
+      targetPort: 9090
+    selector:
+      app.kubernetes.io/component: prometheus
+      app.kubernetes.io/name: prometheus
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"name":"prometheus-web","namespace":"monitoring"},"spec":{"ports":[{"name":"web","port":9090,"targetPort":9090}],"selector":{"app.kubernetes.io/component":"prometheus","app.kubernetes.io/name":"prometheus"},"type":"ClusterIP"}}
+    creationTimestamp: "2025-11-07T19:39:43Z"
+    name: prometheus-web
+    namespace: monitoring
+    resourceVersion: "72887"
+    uid: 226c8ab9-2c00-414b-a2d6-a5df7877d8f0
+  spec:
+    clusterIP: 10.43.151.15
+    clusterIPs:
+    - 10.43.151.15
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: web
+      port: 9090
+      protocol: TCP
+      targetPort: 9090
+    selector:
+      app.kubernetes.io/component: prometheus
+      app.kubernetes.io/name: prometheus
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: apps/v1
+  kind: DaemonSet
+  metadata:
+    annotations:
+      deprecated.daemonset.template.generation: "1"
+      meta.helm.sh/release-name: prometheus
+      meta.helm.sh/release-namespace: monitoring
+    creationTimestamp: "2025-11-07T19:25:29Z"
+    generation: 1
+    labels:
+      app.kubernetes.io/component: metrics
+      app.kubernetes.io/instance: prometheus
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/name: prometheus-node-exporter
+      app.kubernetes.io/part-of: prometheus-node-exporter
+      app.kubernetes.io/version: 1.10.2
+      helm.sh/chart: prometheus-node-exporter-4.49.1
+      release: prometheus
+    name: prometheus-prometheus-node-exporter
+    namespace: monitoring
+    resourceVersion: "71939"
+    uid: 1c7b9c76-fe7a-45f1-8c04-00eaeac62828
+  spec:
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app.kubernetes.io/instance: prometheus
+        app.kubernetes.io/name: prometheus-node-exporter
+    template:
+      metadata:
+        annotations:
+          cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+        creationTimestamp: null
+        labels:
+          app.kubernetes.io/component: metrics
+          app.kubernetes.io/instance: prometheus
+          app.kubernetes.io/managed-by: Helm
+          app.kubernetes.io/name: prometheus-node-exporter
+          app.kubernetes.io/part-of: prometheus-node-exporter
+          app.kubernetes.io/version: 1.10.2
+          helm.sh/chart: prometheus-node-exporter-4.49.1
+          jobLabel: node-exporter
+          release: prometheus
+      spec:
+        affinity:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+              - matchExpressions:
+                - key: eks.amazonaws.com/compute-type
+                  operator: NotIn
+                  values:
+                  - fargate
+                - key: type
+                  operator: NotIn
+                  values:
+                  - virtual-kubelet
+        automountServiceAccountToken: false
+        containers:
+        - args:
+          - --path.procfs=/host/proc
+          - --path.sysfs=/host/sys
+          - --path.rootfs=/host/root
+          - --path.udev.data=/host/root/run/udev/data
+          - --web.listen-address=[$(HOST_IP)]:9100
+          - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|var/lib/kubelet/.+)($|/)
+          - --collector.filesystem.fs-types-exclude=^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs|erofs)$
+          env:
+          - name: HOST_IP
+            value: 0.0.0.0
+          image: quay.io/prometheus/node-exporter:v1.10.2
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /
+              port: http-metrics
+              scheme: HTTP
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          name: node-exporter
+          ports:
+          - containerPort: 9100
+            name: http-metrics
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /
+              port: http-metrics
+              scheme: HTTP
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources: {}
+          securityContext:
+            readOnlyRootFilesystem: true
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /host/proc
+            name: proc
+            readOnly: true
+          - mountPath: /host/sys
+            name: sys
+            readOnly: true
+          - mountPath: /host/root
+            mountPropagation: HostToContainer
+            name: root
+            readOnly: true
+        dnsPolicy: ClusterFirst
+        hostNetwork: true
+        hostPID: true
+        nodeSelector:
+          kubernetes.io/os: linux
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext:
+          fsGroup: 65534
+          runAsGroup: 65534
+          runAsNonRoot: true
+          runAsUser: 65534
+        serviceAccount: prometheus-prometheus-node-exporter
+        serviceAccountName: prometheus-prometheus-node-exporter
+        terminationGracePeriodSeconds: 30
+        tolerations:
+        - effect: NoSchedule
+          operator: Exists
+        volumes:
+        - hostPath:
+            path: /proc
+            type: ""
+          name: proc
+        - hostPath:
+            path: /sys
+            type: ""
+          name: sys
+        - hostPath:
+            path: /
+            type: ""
+          name: root
+    updateStrategy:
+      rollingUpdate:
+        maxSurge: 0
+        maxUnavailable: 1
+      type: RollingUpdate
+  status:
+    currentNumberScheduled: 1
+    desiredNumberScheduled: 1
+    numberAvailable: 1
+    numberMisscheduled: 0
+    numberReady: 1
+    observedGeneration: 1
+    updatedNumberScheduled: 1
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "3"
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"name":"grafana","namespace":"monitoring"},"spec":{"replicas":1,"selector":{"matchLabels":{"app":"grafana"}},"template":{"metadata":{"labels":{"app":"grafana"}},"spec":{"containers":[{"env":[{"name":"GF_SECURITY_ADMIN_USER","value":"admin"},{"name":"GF_SECURITY_ADMIN_PASSWORD","value":"admin123"}],"image":"grafana/grafana:10.0.1","name":"grafana","ports":[{"containerPort":3000}]}]}}}}
+    creationTimestamp: "2025-11-07T16:28:57Z"
+    generation: 3
+    name: grafana
+    namespace: monitoring
+    resourceVersion: "55462"
+    uid: 3df9de41-1692-41ea-9ea6-957ecd20b542
+  spec:
+    progressDeadlineSeconds: 600
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app: grafana
+    strategy:
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+      type: RollingUpdate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: grafana
+      spec:
+        containers:
+        - env:
+          - name: GF_SECURITY_ADMIN_USER
+            value: admin
+          - name: GF_SECURITY_ADMIN_PASSWORD
+            value: admin123
+          image: grafana/grafana:10.0.1
+          imagePullPolicy: Always
+          name: grafana
+          ports:
+          - containerPort: 3000
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+  status:
+    availableReplicas: 1
+    conditions:
+    - lastTransitionTime: "2025-11-07T16:31:24Z"
+      lastUpdateTime: "2025-11-07T16:31:24Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+    - lastTransitionTime: "2025-11-07T16:28:57Z"
+      lastUpdateTime: "2025-11-07T16:35:11Z"
+      message: ReplicaSet "grafana-dcd7c9b7c" has successfully progressed.
+      reason: NewReplicaSetAvailable
+      status: "True"
+      type: Progressing
+    observedGeneration: 3
+    readyReplicas: 1
+    replicas: 1
+    updatedReplicas: 1
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "4"
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"labels":{"app":"kube-state-metrics"},"name":"kube-state-metrics","namespace":"monitoring"},"spec":{"replicas":1,"selector":{"matchLabels":{"app":"kube-state-metrics"}},"template":{"metadata":{"labels":{"app":"kube-state-metrics"}},"spec":{"containers":[{"args":["--host=0.0.0.0","--port=8080","--metric-labels-allowlist=pods=[*],deployments=[*],services=[*],nodes=[*],namespaces=[*]"],"image":"k8s.gcr.io/kube-state-metrics/kube-state-metrics:v2.12.0","name":"kube-state-metrics","ports":[{"containerPort":8080}]}]}}}}
+    creationTimestamp: "2025-11-07T17:27:16Z"
+    generation: 4
+    labels:
+      app: kube-state-metrics
+    name: kube-state-metrics
+    namespace: monitoring
+    resourceVersion: "61549"
+    uid: 5afe3db7-c6e5-45e3-be77-025e7d3a4d80
+  spec:
+    progressDeadlineSeconds: 600
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app: kube-state-metrics
+    strategy:
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+      type: RollingUpdate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: kube-state-metrics
+      spec:
+        containers:
+        - args:
+          - --host=0.0.0.0
+          - --port=8080
+          - --metric-labels-allowlist=pods=[*],deployments=[*],services=[*],nodes=[*],namespaces=[*]
+          image: k8s.gcr.io/kube-state-metrics/kube-state-metrics:v2.12.0
+          imagePullPolicy: IfNotPresent
+          name: kube-state-metrics
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+  status:
+    availableReplicas: 1
+    conditions:
+    - lastTransitionTime: "2025-11-07T17:33:45Z"
+      lastUpdateTime: "2025-11-07T17:33:45Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+    - lastTransitionTime: "2025-11-07T17:27:16Z"
+      lastUpdateTime: "2025-11-07T17:33:45Z"
+      message: ReplicaSet "kube-state-metrics-74476bcc4b" has successfully progressed.
+      reason: NewReplicaSetAvailable
+      status: "True"
+      type: Progressing
+    observedGeneration: 4
+    readyReplicas: 1
+    replicas: 1
+    updatedReplicas: 1
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "4"
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"name":"prometheus","namespace":"monitoring"},"spec":{"replicas":1,"selector":{"matchLabels":{"app":"prometheus"}},"template":{"metadata":{"labels":{"app":"prometheus"}},"spec":{"containers":[{"args":["--config.file=/etc/prometheus/prometheus.yml"],"image":"prom/prometheus:v2.48.0","name":"prometheus","ports":[{"containerPort":9090}],"volumeMounts":[{"mountPath":"/etc/prometheus","name":"config"}]}],"volumes":[{"configMap":{"name":"prometheus-config"},"name":"config"}]}}}}
+    creationTimestamp: "2025-11-07T16:25:25Z"
+    generation: 5
+    name: prometheus
+    namespace: monitoring
+    resourceVersion: "71729"
+    uid: eb86d12e-2139-43f1-a9d8-b69df65d98dc
+  spec:
+    progressDeadlineSeconds: 600
+    replicas: 0
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app: prometheus
+    strategy:
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+      type: RollingUpdate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: prometheus
+      spec:
+        containers:
+        - args:
+          - --config.file=/etc/prometheus/prometheus.yml
+          image: prom/prometheus:v2.48.0
+          imagePullPolicy: Always
+          name: prometheus
+          ports:
+          - containerPort: 9090
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /etc/prometheus
+            name: config
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - configMap:
+            defaultMode: 420
+            name: prometheus-config
+          name: config
+  status:
+    conditions:
+    - lastTransitionTime: "2025-11-07T16:25:25Z"
+      lastUpdateTime: "2025-11-07T16:35:05Z"
+      message: ReplicaSet "prometheus-d4d844fcf" has successfully progressed.
+      reason: NewReplicaSetAvailable
+      status: "True"
+      type: Progressing
+    - lastTransitionTime: "2025-11-07T17:13:53Z"
+      lastUpdateTime: "2025-11-07T17:13:53Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+    observedGeneration: 5
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "1"
+      meta.helm.sh/release-name: prometheus
+      meta.helm.sh/release-namespace: monitoring
+    creationTimestamp: "2025-11-07T19:25:29Z"
+    generation: 1
+    labels:
+      app.kubernetes.io/instance: prometheus
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/name: grafana
+      app.kubernetes.io/version: 12.2.1
+      helm.sh/chart: grafana-10.1.4
+    name: prometheus-grafana
+    namespace: monitoring
+    resourceVersion: "153029"
+    uid: b1495695-8cf5-47c3-ad87-ec1a28b6d469
+  spec:
+    progressDeadlineSeconds: 600
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app.kubernetes.io/instance: prometheus
+        app.kubernetes.io/name: grafana
+    strategy:
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+      type: RollingUpdate
+    template:
+      metadata:
+        annotations:
+          checksum/config: 0e9cbd0ea8e24e32f7dfca5bab17a2ba05652642f0a09a4882833ae88e4cc4a3
+          checksum/sc-dashboard-provider-config: e70bf6a851099d385178a76de9757bb0bef8299da6d8443602590e44f05fdf24
+          checksum/secret: d59c34c72d250b17a69bb5c29d4f0b6b0b62f1753ab442745f78f806c7e20a1e
+          kubectl.kubernetes.io/default-container: grafana
+        creationTimestamp: null
+        labels:
+          app.kubernetes.io/instance: prometheus
+          app.kubernetes.io/name: grafana
+          app.kubernetes.io/version: 12.2.1
+          helm.sh/chart: grafana-10.1.4
+      spec:
+        automountServiceAccountToken: true
+        containers:
+        - env:
+          - name: METHOD
+            value: WATCH
+          - name: LABEL
+            value: grafana_dashboard
+          - name: LABEL_VALUE
+            value: "1"
+          - name: FOLDER
+            value: /tmp/dashboards
+          - name: RESOURCE
+            value: both
+          - name: NAMESPACE
+            value: ALL
+          - name: REQ_USERNAME
+            valueFrom:
+              secretKeyRef:
+                key: admin-user
+                name: prometheus-grafana
+          - name: REQ_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: admin-password
+                name: prometheus-grafana
+          - name: REQ_URL
+            value: http://localhost:3000/api/admin/provisioning/dashboards/reload
+          - name: REQ_METHOD
+            value: POST
+          image: quay.io/kiwigrid/k8s-sidecar:1.30.10
+          imagePullPolicy: IfNotPresent
+          name: grafana-sc-dashboard
+          resources: {}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /tmp/dashboards
+            name: sc-dashboard-volume
+        - env:
+          - name: METHOD
+            value: WATCH
+          - name: LABEL
+            value: grafana_datasource
+          - name: LABEL_VALUE
+            value: "1"
+          - name: FOLDER
+            value: /etc/grafana/provisioning/datasources
+          - name: RESOURCE
+            value: both
+          - name: REQ_USERNAME
+            valueFrom:
+              secretKeyRef:
+                key: admin-user
+                name: prometheus-grafana
+          - name: REQ_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: admin-password
+                name: prometheus-grafana
+          - name: REQ_URL
+            value: http://localhost:3000/api/admin/provisioning/datasources/reload
+          - name: REQ_METHOD
+            value: POST
+          image: quay.io/kiwigrid/k8s-sidecar:1.30.10
+          imagePullPolicy: IfNotPresent
+          name: grafana-sc-datasources
+          resources: {}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /etc/grafana/provisioning/datasources
+            name: sc-datasources-volume
+        - env:
+          - name: POD_IP
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: status.podIP
+          - name: GF_SECURITY_ADMIN_USER
+            valueFrom:
+              secretKeyRef:
+                key: admin-user
+                name: prometheus-grafana
+          - name: GF_SECURITY_ADMIN_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: admin-password
+                name: prometheus-grafana
+          - name: GF_PATHS_DATA
+            value: /var/lib/grafana/
+          - name: GF_PATHS_LOGS
+            value: /var/log/grafana
+          - name: GF_PATHS_PLUGINS
+            value: /var/lib/grafana/plugins
+          - name: GF_PATHS_PROVISIONING
+            value: /etc/grafana/provisioning
+          image: docker.io/grafana/grafana:12.2.1
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 10
+            httpGet:
+              path: /api/health
+              port: 3000
+              scheme: HTTP
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 30
+          name: grafana
+          ports:
+          - containerPort: 3000
+            name: grafana
+            protocol: TCP
+          - containerPort: 9094
+            name: gossip-tcp
+            protocol: TCP
+          - containerPort: 9094
+            name: gossip-udp
+            protocol: UDP
+          - containerPort: 6060
+            name: profiling
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /api/health
+              port: 3000
+              scheme: HTTP
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources: {}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /etc/grafana/grafana.ini
+            name: config
+            subPath: grafana.ini
+          - mountPath: /var/lib/grafana
+            name: storage
+          - mountPath: /tmp/dashboards
+            name: sc-dashboard-volume
+          - mountPath: /etc/grafana/provisioning/dashboards/sc-dashboardproviders.yaml
+            name: sc-dashboard-provider
+            subPath: provider.yaml
+          - mountPath: /etc/grafana/provisioning/datasources
+            name: sc-datasources-volume
+        dnsPolicy: ClusterFirst
+        enableServiceLinks: true
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext:
+          fsGroup: 472
+          runAsGroup: 472
+          runAsNonRoot: true
+          runAsUser: 472
+        serviceAccount: prometheus-grafana
+        serviceAccountName: prometheus-grafana
+        shareProcessNamespace: false
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - configMap:
+            defaultMode: 420
+            name: prometheus-grafana
+          name: config
+        - emptyDir: {}
+          name: storage
+        - emptyDir: {}
+          name: sc-dashboard-volume
+        - configMap:
+            defaultMode: 420
+            name: prometheus-grafana-config-dashboards
+          name: sc-dashboard-provider
+        - emptyDir: {}
+          name: sc-datasources-volume
+  status:
+    availableReplicas: 1
+    conditions:
+    - lastTransitionTime: "2025-11-07T19:25:29Z"
+      lastUpdateTime: "2025-11-07T19:26:20Z"
+      message: ReplicaSet "prometheus-grafana-bb6bf7779" has successfully progressed.
+      reason: NewReplicaSetAvailable
+      status: "True"
+      type: Progressing
+    - lastTransitionTime: "2025-11-08T11:06:31Z"
+      lastUpdateTime: "2025-11-08T11:06:31Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+    observedGeneration: 1
+    readyReplicas: 1
+    replicas: 1
+    updatedReplicas: 1
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "1"
+      meta.helm.sh/release-name: prometheus
+      meta.helm.sh/release-namespace: monitoring
+    creationTimestamp: "2025-11-07T19:25:29Z"
+    generation: 1
+    labels:
+      app: kube-prometheus-stack-operator
+      app.kubernetes.io/component: prometheus-operator
+      app.kubernetes.io/instance: prometheus
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/name: kube-prometheus-stack-prometheus-operator
+      app.kubernetes.io/part-of: kube-prometheus-stack
+      app.kubernetes.io/version: 79.4.0
+      chart: kube-prometheus-stack-79.4.0
+      heritage: Helm
+      release: prometheus
+    name: prometheus-kube-prometheus-operator
+    namespace: monitoring
+    resourceVersion: "71367"
+    uid: e54de17a-6427-4b5f-bf91-8fba1dc26706
+  spec:
+    progressDeadlineSeconds: 600
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app: kube-prometheus-stack-operator
+        release: prometheus
+    strategy:
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+      type: RollingUpdate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: kube-prometheus-stack-operator
+          app.kubernetes.io/component: prometheus-operator
+          app.kubernetes.io/instance: prometheus
+          app.kubernetes.io/managed-by: Helm
+          app.kubernetes.io/name: kube-prometheus-stack-prometheus-operator
+          app.kubernetes.io/part-of: kube-prometheus-stack
+          app.kubernetes.io/version: 79.4.0
+          chart: kube-prometheus-stack-79.4.0
+          heritage: Helm
+          release: prometheus
+      spec:
+        automountServiceAccountToken: true
+        containers:
+        - args:
+          - --kubelet-service=kube-system/prometheus-kube-prometheus-kubelet
+          - --kubelet-endpoints=true
+          - --kubelet-endpointslice=false
+          - --localhost=127.0.0.1
+          - --prometheus-config-reloader=quay.io/prometheus-operator/prometheus-config-reloader:v0.86.2
+          - --config-reloader-cpu-request=0
+          - --config-reloader-cpu-limit=0
+          - --config-reloader-memory-request=0
+          - --config-reloader-memory-limit=0
+          - --thanos-default-base-image=quay.io/thanos/thanos:v0.40.1
+          - --secret-field-selector=type!=kubernetes.io/dockercfg,type!=kubernetes.io/service-account-token,type!=helm.sh/release.v1
+          - --web.enable-tls=true
+          - --web.cert-file=/cert/cert
+          - --web.key-file=/cert/key
+          - --web.listen-address=:10250
+          - --web.tls-min-version=VersionTLS13
+          env:
+          - name: GOGC
+            value: "30"
+          image: quay.io/prometheus-operator/prometheus-operator:v0.86.2
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: https
+              scheme: HTTPS
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          name: kube-prometheus-stack
+          ports:
+          - containerPort: 10250
+            name: https
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: https
+              scheme: HTTPS
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources: {}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /cert
+            name: tls-secret
+            readOnly: true
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext:
+          fsGroup: 65534
+          runAsGroup: 65534
+          runAsNonRoot: true
+          runAsUser: 65534
+          seccompProfile:
+            type: RuntimeDefault
+        serviceAccount: prometheus-kube-prometheus-operator
+        serviceAccountName: prometheus-kube-prometheus-operator
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - name: tls-secret
+          secret:
+            defaultMode: 420
+            secretName: prometheus-kube-prometheus-admission
+  status:
+    availableReplicas: 1
+    conditions:
+    - lastTransitionTime: "2025-11-07T19:25:36Z"
+      lastUpdateTime: "2025-11-07T19:25:36Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+    - lastTransitionTime: "2025-11-07T19:25:29Z"
+      lastUpdateTime: "2025-11-07T19:25:36Z"
+      message: ReplicaSet "prometheus-kube-prometheus-operator-644c4f8c94" has successfully
+        progressed.
+      reason: NewReplicaSetAvailable
+      status: "True"
+      type: Progressing
+    observedGeneration: 1
+    readyReplicas: 1
+    replicas: 1
+    updatedReplicas: 1
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "1"
+      meta.helm.sh/release-name: prometheus
+      meta.helm.sh/release-namespace: monitoring
+    creationTimestamp: "2025-11-07T19:25:29Z"
+    generation: 1
+    labels:
+      app.kubernetes.io/component: metrics
+      app.kubernetes.io/instance: prometheus
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/name: kube-state-metrics
+      app.kubernetes.io/part-of: kube-state-metrics
+      app.kubernetes.io/version: 2.17.0
+      helm.sh/chart: kube-state-metrics-6.4.1
+      release: prometheus
+    name: prometheus-kube-state-metrics
+    namespace: monitoring
+    resourceVersion: "71462"
+    uid: 5e920f70-2d0e-42ca-a310-e9b67b11cd0b
+  spec:
+    progressDeadlineSeconds: 600
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app.kubernetes.io/instance: prometheus
+        app.kubernetes.io/name: kube-state-metrics
+    strategy:
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+      type: RollingUpdate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app.kubernetes.io/component: metrics
+          app.kubernetes.io/instance: prometheus
+          app.kubernetes.io/managed-by: Helm
+          app.kubernetes.io/name: kube-state-metrics
+          app.kubernetes.io/part-of: kube-state-metrics
+          app.kubernetes.io/version: 2.17.0
+          helm.sh/chart: kube-state-metrics-6.4.1
+          release: prometheus
+      spec:
+        automountServiceAccountToken: true
+        containers:
+        - args:
+          - --port=8080
+          - --resources=certificatesigningrequests,configmaps,cronjobs,daemonsets,deployments,endpoints,horizontalpodautoscalers,ingresses,jobs,leases,limitranges,mutatingwebhookconfigurations,namespaces,networkpolicies,nodes,persistentvolumeclaims,persistentvolumes,poddisruptionbudgets,pods,replicasets,replicationcontrollers,resourcequotas,secrets,services,statefulsets,storageclasses,validatingwebhookconfigurations,volumeattachments
+          image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.17.0
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /livez
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          name: kube-state-metrics
+          ports:
+          - containerPort: 8080
+            name: http
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /readyz
+              port: 8081
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          resources: {}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext:
+          fsGroup: 65534
+          runAsGroup: 65534
+          runAsNonRoot: true
+          runAsUser: 65534
+          seccompProfile:
+            type: RuntimeDefault
+        serviceAccount: prometheus-kube-state-metrics
+        serviceAccountName: prometheus-kube-state-metrics
+        terminationGracePeriodSeconds: 30
+  status:
+    availableReplicas: 1
+    conditions:
+    - lastTransitionTime: "2025-11-07T19:25:48Z"
+      lastUpdateTime: "2025-11-07T19:25:48Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+    - lastTransitionTime: "2025-11-07T19:25:29Z"
+      lastUpdateTime: "2025-11-07T19:25:48Z"
+      message: ReplicaSet "prometheus-kube-state-metrics-f7d8f5f9b" has successfully
+        progressed.
+      reason: NewReplicaSetAvailable
+      status: "True"
+      type: Progressing
+    observedGeneration: 1
+    readyReplicas: 1
+    replicas: 1
+    updatedReplicas: 1
+- apiVersion: apps/v1
+  kind: ReplicaSet
+  metadata:
+    annotations:
+      deployment.kubernetes.io/desired-replicas: "1"
+      deployment.kubernetes.io/max-replicas: "2"
+      deployment.kubernetes.io/revision: "2"
+    creationTimestamp: "2025-11-07T16:31:17Z"
+    generation: 2
+    labels:
+      app: grafana
+      pod-template-hash: 575b8cdcc6
+    name: grafana-575b8cdcc6
+    namespace: monitoring
+    ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: Deployment
+      name: grafana
+      uid: 3df9de41-1692-41ea-9ea6-957ecd20b542
+    resourceVersion: "55461"
+    uid: 77eebf37-0a6e-47c3-955e-1dd0bfb581d4
+  spec:
+    replicas: 0
+    selector:
+      matchLabels:
+        app: grafana
+        pod-template-hash: 575b8cdcc6
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: grafana
+          pod-template-hash: 575b8cdcc6
+      spec:
+        containers:
+        - image: grafana/grafana:latest
+          imagePullPolicy: Always
+          name: grafana
+          ports:
+          - containerPort: 3000
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /var/lib/grafana
+            name: grafana-storage
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - emptyDir: {}
+          name: grafana-storage
+  status:
+    observedGeneration: 2
+    replicas: 0
+- apiVersion: apps/v1
+  kind: ReplicaSet
+  metadata:
+    annotations:
+      deployment.kubernetes.io/desired-replicas: "1"
+      deployment.kubernetes.io/max-replicas: "2"
+      deployment.kubernetes.io/revision: "1"
+    creationTimestamp: "2025-11-07T16:28:57Z"
+    generation: 2
+    labels:
+      app: grafana
+      pod-template-hash: 7647f8694f
+    name: grafana-7647f8694f
+    namespace: monitoring
+    ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: Deployment
+      name: grafana
+      uid: 3df9de41-1692-41ea-9ea6-957ecd20b542
+    resourceVersion: "55023"
+    uid: 026c46a3-de23-47e0-97d8-8a6bcd9e2426
+  spec:
+    replicas: 0
+    selector:
+      matchLabels:
+        app: grafana
+        pod-template-hash: 7647f8694f
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: grafana
+          pod-template-hash: 7647f8694f
+      spec:
+        containers:
+        - env:
+          - name: GF_SECURITY_ADMIN_USER
+            value: admin
+          - name: GF_SECURITY_ADMIN_PASSWORD
+            value: admin
+          image: grafana/grafana:latest
+          imagePullPolicy: Always
+          name: grafana
+          ports:
+          - containerPort: 3000
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /var/lib/grafana
+            name: grafana-data
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - hostPath:
+            path: /mnt/grafana/data
+            type: DirectoryOrCreate
+          name: grafana-data
+  status:
+    observedGeneration: 2
+    replicas: 0
+- apiVersion: apps/v1
+  kind: ReplicaSet
+  metadata:
+    annotations:
+      deployment.kubernetes.io/desired-replicas: "1"
+      deployment.kubernetes.io/max-replicas: "2"
+      deployment.kubernetes.io/revision: "3"
+    creationTimestamp: "2025-11-07T16:34:54Z"
+    generation: 1
+    labels:
+      app: grafana
+      pod-template-hash: dcd7c9b7c
+    name: grafana-dcd7c9b7c
+    namespace: monitoring
+    ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: Deployment
+      name: grafana
+      uid: 3df9de41-1692-41ea-9ea6-957ecd20b542
+    resourceVersion: "55451"
+    uid: 487f2195-460e-422d-9637-eebcc7ff6d1e
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: grafana
+        pod-template-hash: dcd7c9b7c
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: grafana
+          pod-template-hash: dcd7c9b7c
+      spec:
+        containers:
+        - env:
+          - name: GF_SECURITY_ADMIN_USER
+            value: admin
+          - name: GF_SECURITY_ADMIN_PASSWORD
+            value: admin123
+          image: grafana/grafana:10.0.1
+          imagePullPolicy: Always
+          name: grafana
+          ports:
+          - containerPort: 3000
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+  status:
+    availableReplicas: 1
+    fullyLabeledReplicas: 1
+    observedGeneration: 1
+    readyReplicas: 1
+    replicas: 1
+- apiVersion: apps/v1
+  kind: ReplicaSet
+  metadata:
+    annotations:
+      deployment.kubernetes.io/desired-replicas: "1"
+      deployment.kubernetes.io/max-replicas: "2"
+      deployment.kubernetes.io/revision: "2"
+    creationTimestamp: "2025-11-07T17:29:02Z"
+    generation: 2
+    labels:
+      app: kube-state-metrics
+      pod-template-hash: 5fb87b44f
+    name: kube-state-metrics-5fb87b44f
+    namespace: monitoring
+    ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: Deployment
+      name: kube-state-metrics
+      uid: 5afe3db7-c6e5-45e3-be77-025e7d3a4d80
+    resourceVersion: "61307"
+    uid: 255a9a58-2179-4f74-a63c-41b847eb7ea5
+  spec:
+    replicas: 0
+    selector:
+      matchLabels:
+        app: kube-state-metrics
+        pod-template-hash: 5fb87b44f
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: kube-state-metrics
+          pod-template-hash: 5fb87b44f
+      spec:
+        containers:
+        - args:
+          - --listen-address=:8080
+          - --metric-labels-allowlist=*=*
+          image: k8s.gcr.io/kube-state-metrics/kube-state-metrics:v2.12.0
+          imagePullPolicy: IfNotPresent
+          name: kube-state-metrics
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+  status:
+    observedGeneration: 2
+    replicas: 0
+- apiVersion: apps/v1
+  kind: ReplicaSet
+  metadata:
+    annotations:
+      deployment.kubernetes.io/desired-replicas: "1"
+      deployment.kubernetes.io/max-replicas: "2"
+      deployment.kubernetes.io/revision: "4"
+    creationTimestamp: "2025-11-07T17:33:44Z"
+    generation: 1
+    labels:
+      app: kube-state-metrics
+      pod-template-hash: 74476bcc4b
+    name: kube-state-metrics-74476bcc4b
+    namespace: monitoring
+    ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: Deployment
+      name: kube-state-metrics
+      uid: 5afe3db7-c6e5-45e3-be77-025e7d3a4d80
+    resourceVersion: "61537"
+    uid: 7b36cd64-7388-49d3-8120-fe1d2a90849f
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: kube-state-metrics
+        pod-template-hash: 74476bcc4b
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: kube-state-metrics
+          pod-template-hash: 74476bcc4b
+      spec:
+        containers:
+        - args:
+          - --host=0.0.0.0
+          - --port=8080
+          - --metric-labels-allowlist=pods=[*],deployments=[*],services=[*],nodes=[*],namespaces=[*]
+          image: k8s.gcr.io/kube-state-metrics/kube-state-metrics:v2.12.0
+          imagePullPolicy: IfNotPresent
+          name: kube-state-metrics
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+  status:
+    availableReplicas: 1
+    fullyLabeledReplicas: 1
+    observedGeneration: 1
+    readyReplicas: 1
+    replicas: 1
+- apiVersion: apps/v1
+  kind: ReplicaSet
+  metadata:
+    annotations:
+      deployment.kubernetes.io/desired-replicas: "1"
+      deployment.kubernetes.io/max-replicas: "2"
+      deployment.kubernetes.io/revision: "3"
+    creationTimestamp: "2025-11-07T17:30:24Z"
+    generation: 3
+    labels:
+      app: kube-state-metrics
+      pod-template-hash: 869496bd9c
+    name: kube-state-metrics-869496bd9c
+    namespace: monitoring
+    ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: Deployment
+      name: kube-state-metrics
+      uid: 5afe3db7-c6e5-45e3-be77-025e7d3a4d80
+    resourceVersion: "61548"
+    uid: e45071fb-f305-4652-9d1d-f1f1dc51b13d
+  spec:
+    replicas: 0
+    selector:
+      matchLabels:
+        app: kube-state-metrics
+        pod-template-hash: 869496bd9c
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: kube-state-metrics
+          pod-template-hash: 869496bd9c
+      spec:
+        containers:
+        - args:
+          - --host=0.0.0.0
+          - --port=8080
+          - --metric-labels-allowlist=*=*
+          image: k8s.gcr.io/kube-state-metrics/kube-state-metrics:v2.12.0
+          imagePullPolicy: IfNotPresent
+          name: kube-state-metrics
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+  status:
+    observedGeneration: 3
+    replicas: 0
+- apiVersion: apps/v1
+  kind: ReplicaSet
+  metadata:
+    annotations:
+      deployment.kubernetes.io/desired-replicas: "1"
+      deployment.kubernetes.io/max-replicas: "2"
+      deployment.kubernetes.io/revision: "1"
+    creationTimestamp: "2025-11-07T17:27:16Z"
+    generation: 2
+    labels:
+      app: kube-state-metrics
+      pod-template-hash: dfd8cc74
+    name: kube-state-metrics-dfd8cc74
+    namespace: monitoring
+    ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: Deployment
+      name: kube-state-metrics
+      uid: 5afe3db7-c6e5-45e3-be77-025e7d3a4d80
+    resourceVersion: "60961"
+    uid: f936ccf3-70e9-43a7-8169-a0613a6dccc0
+  spec:
+    replicas: 0
+    selector:
+      matchLabels:
+        app: kube-state-metrics
+        pod-template-hash: dfd8cc74
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: kube-state-metrics
+          pod-template-hash: dfd8cc74
+      spec:
+        containers:
+        - args:
+          - --host=0.0.0.0
+          - --port=8080
+          - --metric-labels-allowlist=pods=*,nodes=*,namespaces=*
+          image: k8s.gcr.io/kube-state-metrics/kube-state-metrics:v2.12.0
+          imagePullPolicy: IfNotPresent
+          name: kube-state-metrics
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+  status:
+    observedGeneration: 2
+    replicas: 0
+- apiVersion: apps/v1
+  kind: ReplicaSet
+  metadata:
+    annotations:
+      deployment.kubernetes.io/desired-replicas: "1"
+      deployment.kubernetes.io/max-replicas: "2"
+      deployment.kubernetes.io/revision: "3"
+    creationTimestamp: "2025-11-07T16:31:17Z"
+    generation: 2
+    labels:
+      app: prometheus
+      pod-template-hash: 695d787fd4
+    name: prometheus-695d787fd4
+    namespace: monitoring
+    ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: Deployment
+      name: prometheus
+      uid: eb86d12e-2139-43f1-a9d8-b69df65d98dc
+    resourceVersion: "55431"
+    uid: 2c764964-e816-4466-a724-f89c74de0540
+  spec:
+    replicas: 0
+    selector:
+      matchLabels:
+        app: prometheus
+        pod-template-hash: 695d787fd4
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: prometheus
+          pod-template-hash: 695d787fd4
+      spec:
+        containers:
+        - args:
+          - --config.file=/etc/prometheus/prometheus.yml
+          image: prom/prometheus:latest
+          imagePullPolicy: Always
+          name: prometheus
+          ports:
+          - containerPort: 9090
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /etc/prometheus
+            name: prometheus-config
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - configMap:
+            defaultMode: 420
+            name: prometheus-config
+          name: prometheus-config
+  status:
+    observedGeneration: 2
+    replicas: 0
+- apiVersion: apps/v1
+  kind: ReplicaSet
+  metadata:
+    annotations:
+      deployment.kubernetes.io/desired-replicas: "1"
+      deployment.kubernetes.io/max-replicas: "2"
+      deployment.kubernetes.io/revision: "1"
+    creationTimestamp: "2025-11-07T16:25:25Z"
+    generation: 2
+    labels:
+      app: prometheus
+      pod-template-hash: 6f9589b4c7
+    name: prometheus-6f9589b4c7
+    namespace: monitoring
+    ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: Deployment
+      name: prometheus
+      uid: eb86d12e-2139-43f1-a9d8-b69df65d98dc
+    resourceVersion: "54706"
+    uid: 9f3bd9d2-228f-48b0-a8c9-a08f7abf2a22
+  spec:
+    replicas: 0
+    selector:
+      matchLabels:
+        app: prometheus
+        pod-template-hash: 6f9589b4c7
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: prometheus
+          pod-template-hash: 6f9589b4c7
+      spec:
+        containers:
+        - args:
+          - --config.file=/etc/prometheus/prometheus.yml
+          - --storage.tsdb.path=/prometheus
+          image: prom/prometheus:latest
+          imagePullPolicy: Always
+          name: prometheus
+          ports:
+          - containerPort: 9090
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /prometheus
+            name: prometheus-data
+          - mountPath: /etc/prometheus/
+            name: prometheus-config
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - hostPath:
+            path: /mnt/prometheus/data
+            type: ""
+          name: prometheus-data
+        - configMap:
+            defaultMode: 420
+            name: prometheus-config
+          name: prometheus-config
+  status:
+    observedGeneration: 2
+    replicas: 0
+- apiVersion: apps/v1
+  kind: ReplicaSet
+  metadata:
+    annotations:
+      deployment.kubernetes.io/desired-replicas: "1"
+      deployment.kubernetes.io/max-replicas: "2"
+      deployment.kubernetes.io/revision: "2"
+    creationTimestamp: "2025-11-07T16:28:09Z"
+    generation: 2
+    labels:
+      app: prometheus
+      pod-template-hash: 7c44fdf657
+    name: prometheus-7c44fdf657
+    namespace: monitoring
+    ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: Deployment
+      name: prometheus
+      uid: eb86d12e-2139-43f1-a9d8-b69df65d98dc
+    resourceVersion: "55021"
+    uid: 073b73e5-e18b-420f-a17c-48316e6635d9
+  spec:
+    replicas: 0
+    selector:
+      matchLabels:
+        app: prometheus
+        pod-template-hash: 7c44fdf657
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: prometheus
+          pod-template-hash: 7c44fdf657
+      spec:
+        containers:
+        - args:
+          - --config.file=/etc/prometheus/prometheus.yml
+          - --storage.tsdb.path=/prometheus
+          image: prom/prometheus:latest
+          imagePullPolicy: Always
+          name: prometheus
+          ports:
+          - containerPort: 9090
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /prometheus
+            name: prometheus-data
+          - mountPath: /etc/prometheus/
+            name: prometheus-config
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - hostPath:
+            path: /mnt/prometheus/data
+            type: DirectoryOrCreate
+          name: prometheus-data
+        - configMap:
+            defaultMode: 420
+            name: prometheus-config
+          name: prometheus-config
+  status:
+    observedGeneration: 2
+    replicas: 0
+- apiVersion: apps/v1
+  kind: ReplicaSet
+  metadata:
+    annotations:
+      deployment.kubernetes.io/desired-replicas: "0"
+      deployment.kubernetes.io/max-replicas: "0"
+      deployment.kubernetes.io/revision: "4"
+    creationTimestamp: "2025-11-07T16:34:54Z"
+    generation: 2
+    labels:
+      app: prometheus
+      pod-template-hash: d4d844fcf
+    name: prometheus-d4d844fcf
+    namespace: monitoring
+    ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: Deployment
+      name: prometheus
+      uid: eb86d12e-2139-43f1-a9d8-b69df65d98dc
+    resourceVersion: "71728"
+    uid: 90b038ca-1f5c-4caf-ac26-11e355f517b3
+  spec:
+    replicas: 0
+    selector:
+      matchLabels:
+        app: prometheus
+        pod-template-hash: d4d844fcf
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: prometheus
+          pod-template-hash: d4d844fcf
+      spec:
+        containers:
+        - args:
+          - --config.file=/etc/prometheus/prometheus.yml
+          image: prom/prometheus:v2.48.0
+          imagePullPolicy: Always
+          name: prometheus
+          ports:
+          - containerPort: 9090
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /etc/prometheus
+            name: config
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - configMap:
+            defaultMode: 420
+            name: prometheus-config
+          name: config
+  status:
+    observedGeneration: 2
+    replicas: 0
+- apiVersion: apps/v1
+  kind: ReplicaSet
+  metadata:
+    annotations:
+      deployment.kubernetes.io/desired-replicas: "1"
+      deployment.kubernetes.io/max-replicas: "2"
+      deployment.kubernetes.io/revision: "1"
+      meta.helm.sh/release-name: prometheus
+      meta.helm.sh/release-namespace: monitoring
+    creationTimestamp: "2025-11-07T19:25:29Z"
+    generation: 1
+    labels:
+      app.kubernetes.io/instance: prometheus
+      app.kubernetes.io/name: grafana
+      app.kubernetes.io/version: 12.2.1
+      helm.sh/chart: grafana-10.1.4
+      pod-template-hash: bb6bf7779
+    name: prometheus-grafana-bb6bf7779
+    namespace: monitoring
+    ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: Deployment
+      name: prometheus-grafana
+      uid: b1495695-8cf5-47c3-ad87-ec1a28b6d469
+    resourceVersion: "153028"
+    uid: f41c7787-7fe6-44c7-a2fa-b490e6618fdf
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app.kubernetes.io/instance: prometheus
+        app.kubernetes.io/name: grafana
+        pod-template-hash: bb6bf7779
+    template:
+      metadata:
+        annotations:
+          checksum/config: 0e9cbd0ea8e24e32f7dfca5bab17a2ba05652642f0a09a4882833ae88e4cc4a3
+          checksum/sc-dashboard-provider-config: e70bf6a851099d385178a76de9757bb0bef8299da6d8443602590e44f05fdf24
+          checksum/secret: d59c34c72d250b17a69bb5c29d4f0b6b0b62f1753ab442745f78f806c7e20a1e
+          kubectl.kubernetes.io/default-container: grafana
+        creationTimestamp: null
+        labels:
+          app.kubernetes.io/instance: prometheus
+          app.kubernetes.io/name: grafana
+          app.kubernetes.io/version: 12.2.1
+          helm.sh/chart: grafana-10.1.4
+          pod-template-hash: bb6bf7779
+      spec:
+        automountServiceAccountToken: true
+        containers:
+        - env:
+          - name: METHOD
+            value: WATCH
+          - name: LABEL
+            value: grafana_dashboard
+          - name: LABEL_VALUE
+            value: "1"
+          - name: FOLDER
+            value: /tmp/dashboards
+          - name: RESOURCE
+            value: both
+          - name: NAMESPACE
+            value: ALL
+          - name: REQ_USERNAME
+            valueFrom:
+              secretKeyRef:
+                key: admin-user
+                name: prometheus-grafana
+          - name: REQ_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: admin-password
+                name: prometheus-grafana
+          - name: REQ_URL
+            value: http://localhost:3000/api/admin/provisioning/dashboards/reload
+          - name: REQ_METHOD
+            value: POST
+          image: quay.io/kiwigrid/k8s-sidecar:1.30.10
+          imagePullPolicy: IfNotPresent
+          name: grafana-sc-dashboard
+          resources: {}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /tmp/dashboards
+            name: sc-dashboard-volume
+        - env:
+          - name: METHOD
+            value: WATCH
+          - name: LABEL
+            value: grafana_datasource
+          - name: LABEL_VALUE
+            value: "1"
+          - name: FOLDER
+            value: /etc/grafana/provisioning/datasources
+          - name: RESOURCE
+            value: both
+          - name: REQ_USERNAME
+            valueFrom:
+              secretKeyRef:
+                key: admin-user
+                name: prometheus-grafana
+          - name: REQ_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: admin-password
+                name: prometheus-grafana
+          - name: REQ_URL
+            value: http://localhost:3000/api/admin/provisioning/datasources/reload
+          - name: REQ_METHOD
+            value: POST
+          image: quay.io/kiwigrid/k8s-sidecar:1.30.10
+          imagePullPolicy: IfNotPresent
+          name: grafana-sc-datasources
+          resources: {}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /etc/grafana/provisioning/datasources
+            name: sc-datasources-volume
+        - env:
+          - name: POD_IP
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: status.podIP
+          - name: GF_SECURITY_ADMIN_USER
+            valueFrom:
+              secretKeyRef:
+                key: admin-user
+                name: prometheus-grafana
+          - name: GF_SECURITY_ADMIN_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: admin-password
+                name: prometheus-grafana
+          - name: GF_PATHS_DATA
+            value: /var/lib/grafana/
+          - name: GF_PATHS_LOGS
+            value: /var/log/grafana
+          - name: GF_PATHS_PLUGINS
+            value: /var/lib/grafana/plugins
+          - name: GF_PATHS_PROVISIONING
+            value: /etc/grafana/provisioning
+          image: docker.io/grafana/grafana:12.2.1
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 10
+            httpGet:
+              path: /api/health
+              port: 3000
+              scheme: HTTP
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 30
+          name: grafana
+          ports:
+          - containerPort: 3000
+            name: grafana
+            protocol: TCP
+          - containerPort: 9094
+            name: gossip-tcp
+            protocol: TCP
+          - containerPort: 9094
+            name: gossip-udp
+            protocol: UDP
+          - containerPort: 6060
+            name: profiling
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /api/health
+              port: 3000
+              scheme: HTTP
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources: {}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /etc/grafana/grafana.ini
+            name: config
+            subPath: grafana.ini
+          - mountPath: /var/lib/grafana
+            name: storage
+          - mountPath: /tmp/dashboards
+            name: sc-dashboard-volume
+          - mountPath: /etc/grafana/provisioning/dashboards/sc-dashboardproviders.yaml
+            name: sc-dashboard-provider
+            subPath: provider.yaml
+          - mountPath: /etc/grafana/provisioning/datasources
+            name: sc-datasources-volume
+        dnsPolicy: ClusterFirst
+        enableServiceLinks: true
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext:
+          fsGroup: 472
+          runAsGroup: 472
+          runAsNonRoot: true
+          runAsUser: 472
+        serviceAccount: prometheus-grafana
+        serviceAccountName: prometheus-grafana
+        shareProcessNamespace: false
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - configMap:
+            defaultMode: 420
+            name: prometheus-grafana
+          name: config
+        - emptyDir: {}
+          name: storage
+        - emptyDir: {}
+          name: sc-dashboard-volume
+        - configMap:
+            defaultMode: 420
+            name: prometheus-grafana-config-dashboards
+          name: sc-dashboard-provider
+        - emptyDir: {}
+          name: sc-datasources-volume
+  status:
+    availableReplicas: 1
+    fullyLabeledReplicas: 1
+    observedGeneration: 1
+    readyReplicas: 1
+    replicas: 1
+- apiVersion: apps/v1
+  kind: ReplicaSet
+  metadata:
+    annotations:
+      deployment.kubernetes.io/desired-replicas: "1"
+      deployment.kubernetes.io/max-replicas: "2"
+      deployment.kubernetes.io/revision: "1"
+      meta.helm.sh/release-name: prometheus
+      meta.helm.sh/release-namespace: monitoring
+    creationTimestamp: "2025-11-07T19:25:29Z"
+    generation: 1
+    labels:
+      app: kube-prometheus-stack-operator
+      app.kubernetes.io/component: prometheus-operator
+      app.kubernetes.io/instance: prometheus
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/name: kube-prometheus-stack-prometheus-operator
+      app.kubernetes.io/part-of: kube-prometheus-stack
+      app.kubernetes.io/version: 79.4.0
+      chart: kube-prometheus-stack-79.4.0
+      heritage: Helm
+      pod-template-hash: 644c4f8c94
+      release: prometheus
+    name: prometheus-kube-prometheus-operator-644c4f8c94
+    namespace: monitoring
+    ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: Deployment
+      name: prometheus-kube-prometheus-operator
+      uid: e54de17a-6427-4b5f-bf91-8fba1dc26706
+    resourceVersion: "71364"
+    uid: 3cc017dd-4be9-4d17-9bc6-9b716324789e
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: kube-prometheus-stack-operator
+        pod-template-hash: 644c4f8c94
+        release: prometheus
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: kube-prometheus-stack-operator
+          app.kubernetes.io/component: prometheus-operator
+          app.kubernetes.io/instance: prometheus
+          app.kubernetes.io/managed-by: Helm
+          app.kubernetes.io/name: kube-prometheus-stack-prometheus-operator
+          app.kubernetes.io/part-of: kube-prometheus-stack
+          app.kubernetes.io/version: 79.4.0
+          chart: kube-prometheus-stack-79.4.0
+          heritage: Helm
+          pod-template-hash: 644c4f8c94
+          release: prometheus
+      spec:
+        automountServiceAccountToken: true
+        containers:
+        - args:
+          - --kubelet-service=kube-system/prometheus-kube-prometheus-kubelet
+          - --kubelet-endpoints=true
+          - --kubelet-endpointslice=false
+          - --localhost=127.0.0.1
+          - --prometheus-config-reloader=quay.io/prometheus-operator/prometheus-config-reloader:v0.86.2
+          - --config-reloader-cpu-request=0
+          - --config-reloader-cpu-limit=0
+          - --config-reloader-memory-request=0
+          - --config-reloader-memory-limit=0
+          - --thanos-default-base-image=quay.io/thanos/thanos:v0.40.1
+          - --secret-field-selector=type!=kubernetes.io/dockercfg,type!=kubernetes.io/service-account-token,type!=helm.sh/release.v1
+          - --web.enable-tls=true
+          - --web.cert-file=/cert/cert
+          - --web.key-file=/cert/key
+          - --web.listen-address=:10250
+          - --web.tls-min-version=VersionTLS13
+          env:
+          - name: GOGC
+            value: "30"
+          image: quay.io/prometheus-operator/prometheus-operator:v0.86.2
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: https
+              scheme: HTTPS
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          name: kube-prometheus-stack
+          ports:
+          - containerPort: 10250
+            name: https
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: https
+              scheme: HTTPS
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources: {}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /cert
+            name: tls-secret
+            readOnly: true
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext:
+          fsGroup: 65534
+          runAsGroup: 65534
+          runAsNonRoot: true
+          runAsUser: 65534
+          seccompProfile:
+            type: RuntimeDefault
+        serviceAccount: prometheus-kube-prometheus-operator
+        serviceAccountName: prometheus-kube-prometheus-operator
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - name: tls-secret
+          secret:
+            defaultMode: 420
+            secretName: prometheus-kube-prometheus-admission
+  status:
+    availableReplicas: 1
+    fullyLabeledReplicas: 1
+    observedGeneration: 1
+    readyReplicas: 1
+    replicas: 1
+- apiVersion: apps/v1
+  kind: ReplicaSet
+  metadata:
+    annotations:
+      deployment.kubernetes.io/desired-replicas: "1"
+      deployment.kubernetes.io/max-replicas: "2"
+      deployment.kubernetes.io/revision: "1"
+      meta.helm.sh/release-name: prometheus
+      meta.helm.sh/release-namespace: monitoring
+    creationTimestamp: "2025-11-07T19:25:29Z"
+    generation: 1
+    labels:
+      app.kubernetes.io/component: metrics
+      app.kubernetes.io/instance: prometheus
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/name: kube-state-metrics
+      app.kubernetes.io/part-of: kube-state-metrics
+      app.kubernetes.io/version: 2.17.0
+      helm.sh/chart: kube-state-metrics-6.4.1
+      pod-template-hash: f7d8f5f9b
+      release: prometheus
+    name: prometheus-kube-state-metrics-f7d8f5f9b
+    namespace: monitoring
+    ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: Deployment
+      name: prometheus-kube-state-metrics
+      uid: 5e920f70-2d0e-42ca-a310-e9b67b11cd0b
+    resourceVersion: "71461"
+    uid: f6cef8aa-06c9-4a2b-9319-bc7ce26ca2ae
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app.kubernetes.io/instance: prometheus
+        app.kubernetes.io/name: kube-state-metrics
+        pod-template-hash: f7d8f5f9b
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app.kubernetes.io/component: metrics
+          app.kubernetes.io/instance: prometheus
+          app.kubernetes.io/managed-by: Helm
+          app.kubernetes.io/name: kube-state-metrics
+          app.kubernetes.io/part-of: kube-state-metrics
+          app.kubernetes.io/version: 2.17.0
+          helm.sh/chart: kube-state-metrics-6.4.1
+          pod-template-hash: f7d8f5f9b
+          release: prometheus
+      spec:
+        automountServiceAccountToken: true
+        containers:
+        - args:
+          - --port=8080
+          - --resources=certificatesigningrequests,configmaps,cronjobs,daemonsets,deployments,endpoints,horizontalpodautoscalers,ingresses,jobs,leases,limitranges,mutatingwebhookconfigurations,namespaces,networkpolicies,nodes,persistentvolumeclaims,persistentvolumes,poddisruptionbudgets,pods,replicasets,replicationcontrollers,resourcequotas,secrets,services,statefulsets,storageclasses,validatingwebhookconfigurations,volumeattachments
+          image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.17.0
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /livez
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          name: kube-state-metrics
+          ports:
+          - containerPort: 8080
+            name: http
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /readyz
+              port: 8081
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          resources: {}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext:
+          fsGroup: 65534
+          runAsGroup: 65534
+          runAsNonRoot: true
+          runAsUser: 65534
+          seccompProfile:
+            type: RuntimeDefault
+        serviceAccount: prometheus-kube-state-metrics
+        serviceAccountName: prometheus-kube-state-metrics
+        terminationGracePeriodSeconds: 30
+  status:
+    availableReplicas: 1
+    fullyLabeledReplicas: 1
+    observedGeneration: 1
+    readyReplicas: 1
+    replicas: 1
+- apiVersion: apps/v1
+  kind: StatefulSet
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: prometheus
+      meta.helm.sh/release-namespace: monitoring
+      prometheus-operator-input-hash: "17829664603724761460"
+    creationTimestamp: "2025-11-07T19:25:36Z"
+    generation: 1
+    labels:
+      alertmanager: prometheus-kube-prometheus-alertmanager
+      app: kube-prometheus-stack-alertmanager
+      app.kubernetes.io/instance: prometheus-kube-prometheus-alertmanager
+      app.kubernetes.io/managed-by: prometheus-operator
+      app.kubernetes.io/name: alertmanager
+      app.kubernetes.io/part-of: kube-prometheus-stack
+      app.kubernetes.io/version: 79.4.0
+      chart: kube-prometheus-stack-79.4.0
+      heritage: Helm
+      managed-by: prometheus-operator
+      release: prometheus
+    name: alertmanager-prometheus-kube-prometheus-alertmanager
+    namespace: monitoring
+    ownerReferences:
+    - apiVersion: monitoring.coreos.com/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: Alertmanager
+      name: prometheus-kube-prometheus-alertmanager
+      uid: e9942311-90e2-4be7-a18c-ddc95e2030ce
+    resourceVersion: "71518"
+    uid: b5b47f37-7f3a-4da8-af87-30110d073a18
+  spec:
+    persistentVolumeClaimRetentionPolicy:
+      whenDeleted: Retain
+      whenScaled: Retain
+    podManagementPolicy: Parallel
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        alertmanager: prometheus-kube-prometheus-alertmanager
+        app.kubernetes.io/instance: prometheus-kube-prometheus-alertmanager
+        app.kubernetes.io/managed-by: prometheus-operator
+        app.kubernetes.io/name: alertmanager
+    serviceName: alertmanager-operated
+    template:
+      metadata:
+        annotations:
+          kubectl.kubernetes.io/default-container: alertmanager
+        creationTimestamp: null
+        labels:
+          alertmanager: prometheus-kube-prometheus-alertmanager
+          app.kubernetes.io/instance: prometheus-kube-prometheus-alertmanager
+          app.kubernetes.io/managed-by: prometheus-operator
+          app.kubernetes.io/name: alertmanager
+          app.kubernetes.io/version: 0.29.0
+      spec:
+        affinity:
+          podAntiAffinity:
+            preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                  - key: app.kubernetes.io/name
+                    operator: In
+                    values:
+                    - alertmanager
+                  - key: alertmanager
+                    operator: In
+                    values:
+                    - prometheus-kube-prometheus-alertmanager
+                topologyKey: kubernetes.io/hostname
+              weight: 100
+        automountServiceAccountToken: true
+        containers:
+        - args:
+          - --config.file=/etc/alertmanager/config_out/alertmanager.env.yaml
+          - --storage.path=/alertmanager
+          - --data.retention=120h
+          - --cluster.listen-address=
+          - --web.listen-address=:9093
+          - --web.external-url=http://prometheus-kube-prometheus-alertmanager.monitoring:9093
+          - --web.route-prefix=/
+          - --cluster.label=monitoring/prometheus-kube-prometheus-alertmanager
+          - --cluster.peer=alertmanager-prometheus-kube-prometheus-alertmanager-0.alertmanager-operated:9094
+          - --cluster.reconnect-timeout=5m
+          - --web.config.file=/etc/alertmanager/web_config/web-config.yaml
+          env:
+          - name: POD_IP
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: status.podIP
+          image: quay.io/prometheus/alertmanager:v0.29.0
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 10
+            httpGet:
+              path: /-/healthy
+              port: http-web
+              scheme: HTTP
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 3
+          name: alertmanager
+          ports:
+          - containerPort: 9093
+            name: http-web
+            protocol: TCP
+          - containerPort: 9094
+            name: mesh-tcp
+            protocol: TCP
+          - containerPort: 9094
+            name: mesh-udp
+            protocol: UDP
+          readinessProbe:
+            failureThreshold: 10
+            httpGet:
+              path: /-/ready
+              port: http-web
+              scheme: HTTP
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 3
+          resources:
+            requests:
+              memory: 200Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+          - mountPath: /etc/alertmanager/config
+            name: config-volume
+          - mountPath: /etc/alertmanager/config_out
+            name: config-out
+            readOnly: true
+          - mountPath: /etc/alertmanager/certs
+            name: tls-assets
+            readOnly: true
+          - mountPath: /alertmanager
+            name: alertmanager-prometheus-kube-prometheus-alertmanager-db
+          - mountPath: /etc/alertmanager/web_config/web-config.yaml
+            name: web-config
+            readOnly: true
+            subPath: web-config.yaml
+          - mountPath: /etc/alertmanager/cluster_tls_config/cluster-tls-config.yaml
+            name: cluster-tls-config
+            readOnly: true
+            subPath: cluster-tls-config.yaml
+        - args:
+          - --listen-address=:8080
+          - --web-config-file=/etc/alertmanager/web_config/web-config.yaml
+          - --reload-url=http://127.0.0.1:9093/-/reload
+          - --config-file=/etc/alertmanager/config/alertmanager.yaml.gz
+          - --config-envsubst-file=/etc/alertmanager/config_out/alertmanager.env.yaml
+          - --watched-dir=/etc/alertmanager/config
+          command:
+          - /bin/prometheus-config-reloader
+          env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.name
+          - name: SHARD
+            value: "-1"
+          image: quay.io/prometheus-operator/prometheus-config-reloader:v0.86.2
+          imagePullPolicy: IfNotPresent
+          name: config-reloader
+          ports:
+          - containerPort: 8080
+            name: reloader-web
+            protocol: TCP
+          resources: {}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+          - mountPath: /etc/alertmanager/config
+            name: config-volume
+            readOnly: true
+          - mountPath: /etc/alertmanager/config_out
+            name: config-out
+          - mountPath: /etc/alertmanager/web_config/web-config.yaml
+            name: web-config
+            readOnly: true
+            subPath: web-config.yaml
+        dnsPolicy: ClusterFirst
+        initContainers:
+        - args:
+          - --watch-interval=0
+          - --listen-address=:8081
+          - --config-file=/etc/alertmanager/config/alertmanager.yaml.gz
+          - --config-envsubst-file=/etc/alertmanager/config_out/alertmanager.env.yaml
+          - --watched-dir=/etc/alertmanager/config
+          command:
+          - /bin/prometheus-config-reloader
+          env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.name
+          - name: SHARD
+            value: "-1"
+          image: quay.io/prometheus-operator/prometheus-config-reloader:v0.86.2
+          imagePullPolicy: IfNotPresent
+          name: init-config-reloader
+          ports:
+          - containerPort: 8081
+            name: reloader-init
+            protocol: TCP
+          resources: {}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+          - mountPath: /etc/alertmanager/config
+            name: config-volume
+            readOnly: true
+          - mountPath: /etc/alertmanager/config_out
+            name: config-out
+          - mountPath: /etc/alertmanager/web_config/web-config.yaml
+            name: web-config
+            readOnly: true
+            subPath: web-config.yaml
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext:
+          fsGroup: 2000
+          runAsGroup: 2000
+          runAsNonRoot: true
+          runAsUser: 1000
+          seccompProfile:
+            type: RuntimeDefault
+        serviceAccount: prometheus-kube-prometheus-alertmanager
+        serviceAccountName: prometheus-kube-prometheus-alertmanager
+        terminationGracePeriodSeconds: 120
+        volumes:
+        - name: config-volume
+          secret:
+            defaultMode: 420
+            secretName: alertmanager-prometheus-kube-prometheus-alertmanager-generated
+        - name: tls-assets
+          projected:
+            defaultMode: 420
+            sources:
+            - secret:
+                name: alertmanager-prometheus-kube-prometheus-alertmanager-tls-assets-0
+        - emptyDir:
+            medium: Memory
+          name: config-out
+        - name: web-config
+          secret:
+            defaultMode: 420
+            secretName: alertmanager-prometheus-kube-prometheus-alertmanager-web-config
+        - name: cluster-tls-config
+          secret:
+            defaultMode: 420
+            secretName: alertmanager-prometheus-kube-prometheus-alertmanager-cluster-tls-config
+        - emptyDir: {}
+          name: alertmanager-prometheus-kube-prometheus-alertmanager-db
+    updateStrategy:
+      type: RollingUpdate
+  status:
+    availableReplicas: 1
+    collisionCount: 0
+    currentReplicas: 1
+    currentRevision: alertmanager-prometheus-kube-prometheus-alertmanager-754f99fd86
+    observedGeneration: 1
+    readyReplicas: 1
+    replicas: 1
+    updateRevision: alertmanager-prometheus-kube-prometheus-alertmanager-754f99fd86
+    updatedReplicas: 1
+- apiVersion: apps/v1
+  kind: StatefulSet
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: prometheus
+      meta.helm.sh/release-namespace: monitoring
+      prometheus-operator-input-hash: "13539628960073914354"
+    creationTimestamp: "2025-11-07T19:25:36Z"
+    generation: 1
+    labels:
+      app: kube-prometheus-stack-prometheus
+      app.kubernetes.io/instance: prometheus-kube-prometheus-prometheus
+      app.kubernetes.io/managed-by: prometheus-operator
+      app.kubernetes.io/name: prometheus
+      app.kubernetes.io/part-of: kube-prometheus-stack
+      app.kubernetes.io/version: 79.4.0
+      chart: kube-prometheus-stack-79.4.0
+      heritage: Helm
+      managed-by: prometheus-operator
+      operator.prometheus.io/mode: server
+      operator.prometheus.io/name: prometheus-kube-prometheus-prometheus
+      operator.prometheus.io/shard: "0"
+      prometheus: prometheus-kube-prometheus-prometheus
+      release: prometheus
+    name: prometheus-prometheus-kube-prometheus-prometheus
+    namespace: monitoring
+    ownerReferences:
+    - apiVersion: monitoring.coreos.com/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: Prometheus
+      name: prometheus-kube-prometheus-prometheus
+      uid: e70a4c82-9cd5-4b44-910e-f404b8ed3546
+    resourceVersion: "152922"
+    uid: 37d6d13f-7a29-44f7-a568-9745c9883c3b
+  spec:
+    persistentVolumeClaimRetentionPolicy:
+      whenDeleted: Retain
+      whenScaled: Retain
+    podManagementPolicy: Parallel
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app.kubernetes.io/instance: prometheus-kube-prometheus-prometheus
+        app.kubernetes.io/managed-by: prometheus-operator
+        app.kubernetes.io/name: prometheus
+        operator.prometheus.io/name: prometheus-kube-prometheus-prometheus
+        operator.prometheus.io/shard: "0"
+        prometheus: prometheus-kube-prometheus-prometheus
+    serviceName: prometheus-operated
+    template:
+      metadata:
+        annotations:
+          kubectl.kubernetes.io/default-container: prometheus
+        creationTimestamp: null
+        labels:
+          app.kubernetes.io/instance: prometheus-kube-prometheus-prometheus
+          app.kubernetes.io/managed-by: prometheus-operator
+          app.kubernetes.io/name: prometheus
+          app.kubernetes.io/version: 3.7.3
+          operator.prometheus.io/name: prometheus-kube-prometheus-prometheus
+          operator.prometheus.io/shard: "0"
+          prometheus: prometheus-kube-prometheus-prometheus
+      spec:
+        affinity:
+          podAntiAffinity:
+            preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                  - key: app.kubernetes.io/name
+                    operator: In
+                    values:
+                    - prometheus
+                  - key: app.kubernetes.io/instance
+                    operator: In
+                    values:
+                    - prometheus-kube-prometheus-prometheus
+                topologyKey: kubernetes.io/hostname
+              weight: 100
+        automountServiceAccountToken: true
+        containers:
+        - args:
+          - --config.file=/etc/prometheus/config_out/prometheus.env.yaml
+          - --web.enable-lifecycle
+          - --web.external-url=http://prometheus-kube-prometheus-prometheus.monitoring:9090
+          - --web.route-prefix=/
+          - --storage.tsdb.retention.time=10d
+          - --storage.tsdb.path=/prometheus
+          - --storage.tsdb.wal-compression
+          - --web.config.file=/etc/prometheus/web_config/web-config.yaml
+          image: quay.io/prometheus/prometheus:v3.7.3
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 6
+            httpGet:
+              path: /-/healthy
+              port: http-web
+              scheme: HTTP
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 3
+          name: prometheus
+          ports:
+          - containerPort: 9090
+            name: http-web
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /-/ready
+              port: http-web
+              scheme: HTTP
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 3
+          resources: {}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+          startupProbe:
+            failureThreshold: 60
+            httpGet:
+              path: /-/ready
+              port: http-web
+              scheme: HTTP
+            periodSeconds: 15
+            successThreshold: 1
+            timeoutSeconds: 3
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+          - mountPath: /etc/prometheus/config_out
+            name: config-out
+            readOnly: true
+          - mountPath: /etc/prometheus/certs
+            name: tls-assets
+            readOnly: true
+          - mountPath: /prometheus
+            name: prometheus-prometheus-kube-prometheus-prometheus-db
+          - mountPath: /etc/prometheus/rules/prometheus-prometheus-kube-prometheus-prometheus-rulefiles-0
+            name: prometheus-prometheus-kube-prometheus-prometheus-rulefiles-0
+          - mountPath: /etc/prometheus/web_config/web-config.yaml
+            name: web-config
+            readOnly: true
+            subPath: web-config.yaml
+        - args:
+          - --listen-address=:8080
+          - --reload-url=http://127.0.0.1:9090/-/reload
+          - --config-file=/etc/prometheus/config/prometheus.yaml.gz
+          - --config-envsubst-file=/etc/prometheus/config_out/prometheus.env.yaml
+          - --watched-dir=/etc/prometheus/rules/prometheus-prometheus-kube-prometheus-prometheus-rulefiles-0
+          command:
+          - /bin/prometheus-config-reloader
+          env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.name
+          - name: SHARD
+            value: "0"
+          image: quay.io/prometheus-operator/prometheus-config-reloader:v0.86.2
+          imagePullPolicy: IfNotPresent
+          name: config-reloader
+          ports:
+          - containerPort: 8080
+            name: reloader-web
+            protocol: TCP
+          resources: {}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+          - mountPath: /etc/prometheus/config
+            name: config
+          - mountPath: /etc/prometheus/config_out
+            name: config-out
+          - mountPath: /etc/prometheus/rules/prometheus-prometheus-kube-prometheus-prometheus-rulefiles-0
+            name: prometheus-prometheus-kube-prometheus-prometheus-rulefiles-0
+        dnsPolicy: ClusterFirst
+        initContainers:
+        - args:
+          - --watch-interval=0
+          - --listen-address=:8081
+          - --config-file=/etc/prometheus/config/prometheus.yaml.gz
+          - --config-envsubst-file=/etc/prometheus/config_out/prometheus.env.yaml
+          - --watched-dir=/etc/prometheus/rules/prometheus-prometheus-kube-prometheus-prometheus-rulefiles-0
+          command:
+          - /bin/prometheus-config-reloader
+          env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.name
+          - name: SHARD
+            value: "0"
+          image: quay.io/prometheus-operator/prometheus-config-reloader:v0.86.2
+          imagePullPolicy: IfNotPresent
+          name: init-config-reloader
+          ports:
+          - containerPort: 8081
+            name: reloader-init
+            protocol: TCP
+          resources: {}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+          - mountPath: /etc/prometheus/config
+            name: config
+          - mountPath: /etc/prometheus/config_out
+            name: config-out
+          - mountPath: /etc/prometheus/rules/prometheus-prometheus-kube-prometheus-prometheus-rulefiles-0
+            name: prometheus-prometheus-kube-prometheus-prometheus-rulefiles-0
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext:
+          fsGroup: 2000
+          runAsGroup: 2000
+          runAsNonRoot: true
+          runAsUser: 1000
+          seccompProfile:
+            type: RuntimeDefault
+        serviceAccount: prometheus-kube-prometheus-prometheus
+        serviceAccountName: prometheus-kube-prometheus-prometheus
+        shareProcessNamespace: false
+        terminationGracePeriodSeconds: 600
+        volumes:
+        - name: config
+          secret:
+            defaultMode: 420
+            secretName: prometheus-prometheus-kube-prometheus-prometheus
+        - name: tls-assets
+          projected:
+            defaultMode: 420
+            sources:
+            - secret:
+                name: prometheus-prometheus-kube-prometheus-prometheus-tls-assets-0
+        - emptyDir:
+            medium: Memory
+          name: config-out
+        - configMap:
+            defaultMode: 420
+            name: prometheus-prometheus-kube-prometheus-prometheus-rulefiles-0
+          name: prometheus-prometheus-kube-prometheus-prometheus-rulefiles-0
+        - name: web-config
+          secret:
+            defaultMode: 420
+            secretName: prometheus-prometheus-kube-prometheus-prometheus-web-config
+        - emptyDir: {}
+          name: prometheus-prometheus-kube-prometheus-prometheus-db
+    updateStrategy:
+      type: RollingUpdate
+  status:
+    availableReplicas: 1
+    collisionCount: 0
+    currentReplicas: 1
+    currentRevision: prometheus-prometheus-kube-prometheus-prometheus-5795957654
+    observedGeneration: 1
+    readyReplicas: 1
+    replicas: 1
+    updateRevision: prometheus-prometheus-kube-prometheus-prometheus-5795957654
+    updatedReplicas: 1
+kind: List
+metadata:
+  resourceVersion: ""

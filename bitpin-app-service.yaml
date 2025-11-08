@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"name":"bitpin-app-svc","namespace":"bitpin-task"},"spec":{"ports":[{"port":80,"protocol":"TCP","targetPort":8000}],"selector":{"app":"bitpin-app"},"type":"ClusterIP"}}
+  creationTimestamp: "2025-11-07T11:59:55Z"
+  name: bitpin-app-svc
+  namespace: bitpin-task
+  resourceVersion: "48325"
+  uid: a0a0de5f-dd29-4c0c-b3ee-a97970d2aec1
+spec:
+  clusterIP: 10.43.111.48
+  clusterIPs:
+  - 10.43.111.48
+  externalTrafficPolicy: Cluster
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: http
+    nodePort: 30505
+    port: 80
+    protocol: TCP
+    targetPort: 8000
+  selector:
+    app: bitpin-app
+  sessionAffinity: None
+  type: NodePort
+status:
+  loadBalancer: {}

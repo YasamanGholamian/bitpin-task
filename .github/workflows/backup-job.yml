@@ -1,0 +1,38 @@
+name: Database Backup Job
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+env:
+  KUBERNETES_NAMESPACE: bitpin-task
+
+jobs:
+  trigger-backup:
+    name: Trigger Database Backup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > kubeconfig
+          export KUBECONFIG=./kubeconfig
+
+      - name: Trigger backup job
+        run: |
+          kubectl create job --from=cronjob/bitpin-full-backup manual-backup-$(date +%Y%m%d-%H%M%S) -n ${{ env.KUBERNETES_NAMESPACE }}
+
+      - name: Wait for backup completion
+        run: |
+          JOB_NAME=$(kubectl get jobs -n ${{ env.KUBERNETES_NAMESPACE }} --sort-by=.metadata.creationTimestamp | grep manual-backup | tail -1 | awk '{print $1}')
+          kubectl wait --for=condition=complete --timeout=600s job/$JOB_NAME -n ${{ env.KUBERNETES_NAMESPACE }}
+

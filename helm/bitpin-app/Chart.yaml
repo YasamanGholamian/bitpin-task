@@ -1,0 +1,13 @@
+apiVersion: v2
+name: bitpin-app
+description: A Helm chart for Bitpin cryptocurrency exchange application
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - django
+  - cryptocurrency
+  - exchange
+maintainers:
+  - name: Bitpin Team
+

@@ -1,0 +1,53 @@
+# Kubernetes
+*.kubeconfig
+kubeconfig
+*.pem
+*.key
+*.crt
+
+# Secrets
+secrets/
+*.secret.yaml
+*secret*.yaml
+
+# Helm
+.helm/
+charts/*.tgz
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+.env
+.env.local
+
+# Backup files
+*.bak
+*.backup
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+
+# Docker
+.dockerignore
+

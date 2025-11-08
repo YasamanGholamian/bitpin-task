@@ -1,0 +1,890 @@
+apiVersion: v1
+items:
+- apiVersion: v1
+  data:
+    queries: |
+      backends:
+        query: |
+         SELECT sa.datname
+             , sa.usename
+             , sa.application_name
+             , states.state
+             , COALESCE(sa.count, 0) AS total
+             , COALESCE(sa.max_tx_secs, 0) AS max_tx_duration_seconds
+             FROM ( VALUES ('active')
+                 , ('idle')
+                 , ('idle in transaction')
+                 , ('idle in transaction (aborted)')
+                 , ('fastpath function call')
+                 , ('disabled')
+                 ) AS states(state)
+             LEFT JOIN (
+                 SELECT datname
+                     , state
+                     , usename
+                     , COALESCE(application_name, '') AS application_name
+                     , COUNT(*)
+                     , COALESCE(EXTRACT (EPOCH FROM (max(now() - xact_start))), 0) AS max_tx_secs
+                 FROM pg_catalog.pg_stat_activity
+                 GROUP BY datname, state, usename, application_name
+             ) sa ON states.state = sa.state
+             WHERE sa.usename IS NOT NULL
+        metrics:
+          - datname:
+              usage: "LABEL"
+              description: "Name of the database"
+          - usename:
+              usage: "LABEL"
+              description: "Name of the user"
+          - application_name:
+              usage: "LABEL"
+              description: "Name of the application"
+          - state:
+              usage: "LABEL"
+              description: "State of the backend"
+          - total:
+              usage: "GAUGE"
+              description: "Number of backends"
+          - max_tx_duration_seconds:
+              usage: "GAUGE"
+              description: "Maximum duration of a transaction in seconds"
+
+      backends_waiting:
+        query: |
+         SELECT count(*) AS total
+         FROM pg_catalog.pg_locks blocked_locks
+         JOIN pg_catalog.pg_locks blocking_locks
+           ON blocking_locks.locktype = blocked_locks.locktype
+           AND blocking_locks.database IS NOT DISTINCT FROM blocked_locks.database
+           AND blocking_locks.relation IS NOT DISTINCT FROM blocked_locks.relation
+           AND blocking_locks.page IS NOT DISTINCT FROM blocked_locks.page
+           AND blocking_locks.tuple IS NOT DISTINCT FROM blocked_locks.tuple
+           AND blocking_locks.virtualxid IS NOT DISTINCT FROM blocked_locks.virtualxid
+           AND blocking_locks.transactionid IS NOT DISTINCT FROM blocked_locks.transactionid
+           AND blocking_locks.classid IS NOT DISTINCT FROM blocked_locks.classid
+           AND blocking_locks.objid IS NOT DISTINCT FROM blocked_locks.objid
+           AND blocking_locks.objsubid IS NOT DISTINCT FROM blocked_locks.objsubid
+           AND blocking_locks.pid != blocked_locks.pid
+         JOIN pg_catalog.pg_stat_activity blocking_activity ON blocking_activity.pid = blocking_locks.pid
+         WHERE NOT blocked_locks.granted
+        metrics:
+          - total:
+              usage: "GAUGE"
+              description: "Total number of backends that are currently waiting on other queries"
+
+      pg_database:
+        query: |
+          SELECT datname
+            , pg_catalog.pg_database_size(datname) AS size_bytes
+            , pg_catalog.age(datfrozenxid) AS xid_age
+            , pg_catalog.mxid_age(datminmxid) AS mxid_age
+          FROM pg_catalog.pg_database
+          WHERE datallowconn
+        metrics:
+          - datname:
+              usage: "LABEL"
+              description: "Name of the database"
+          - size_bytes:
+              usage: "GAUGE"
+              description: "Disk space used by the database"
+          - xid_age:
+              usage: "GAUGE"
+              description: "Number of transactions from the frozen XID to the current one"
+          - mxid_age:
+              usage: "GAUGE"
+              description: "Number of multiple transactions (Multixact) from the frozen XID to the current one"
+
+      pg_postmaster:
+        query: |
+          SELECT EXTRACT(EPOCH FROM pg_postmaster_start_time) AS start_time
+          FROM pg_catalog.pg_postmaster_start_time()
+        metrics:
+          - start_time:
+              usage: "GAUGE"
+              description: "Time at which postgres started (based on epoch)"
+
+      pg_replication:
+        query: "SELECT CASE WHEN (
+                  NOT pg_catalog.pg_is_in_recovery()
+                  OR pg_catalog.pg_last_wal_receive_lsn() = pg_catalog.pg_last_wal_replay_lsn())
+                THEN 0
+                ELSE GREATEST (0,
+                  EXTRACT(EPOCH FROM (now() - pg_catalog.pg_last_xact_replay_timestamp())))
+                END AS lag,
+                pg_catalog.pg_is_in_recovery() AS in_recovery,
+                EXISTS (TABLE pg_stat_wal_receiver) AS is_wal_receiver_up,
+                (SELECT count(*) FROM pg_catalog.pg_stat_replication) AS streaming_replicas"
+        metrics:
+          - lag:
+              usage: "GAUGE"
+              description: "Replication lag behind primary in seconds"
+          - in_recovery:
+              usage: "GAUGE"
+              description: "Whether the instance is in recovery"
+          - is_wal_receiver_up:
+              usage: "GAUGE"
+              description: "Whether the instance wal_receiver is up"
+          - streaming_replicas:
+              usage: "GAUGE"
+              description: "Number of streaming replicas connected to the instance"
+
+      pg_replication_slots:
+        query: |
+          SELECT slot_name,
+            slot_type,
+            database,
+            active,
+            (CASE pg_catalog.pg_is_in_recovery()
+              WHEN TRUE THEN pg_catalog.pg_wal_lsn_diff(pg_catalog.pg_last_wal_receive_lsn(), restart_lsn)
+              ELSE pg_catalog.pg_wal_lsn_diff(pg_catalog.pg_current_wal_lsn(), restart_lsn)
+            END) as pg_wal_lsn_diff
+          FROM pg_catalog.pg_replication_slots
+          WHERE NOT temporary
+        metrics:
+          - slot_name:
+              usage: "LABEL"
+              description: "Name of the replication slot"
+          - slot_type:
+              usage: "LABEL"
+              description: "Type of the replication slot"
+          - database:
+              usage: "LABEL"
+              description: "Name of the database"
+          - active:
+              usage: "GAUGE"
+              description: "Flag indicating whether the slot is active"
+          - pg_wal_lsn_diff:
+              usage: "GAUGE"
+              description: "Replication lag in bytes"
+
+      pg_stat_archiver:
+        query: |
+          SELECT archived_count
+            , failed_count
+            , COALESCE(EXTRACT(EPOCH FROM (now() - last_archived_time)), -1) AS seconds_since_last_archival
+            , COALESCE(EXTRACT(EPOCH FROM (now() - last_failed_time)), -1) AS seconds_since_last_failure
+            , COALESCE(EXTRACT(EPOCH FROM last_archived_time), -1) AS last_archived_time
+            , COALESCE(EXTRACT(EPOCH FROM last_failed_time), -1) AS last_failed_time
+            , COALESCE(CAST(CAST('x'||pg_catalog.right(pg_catalog.split_part(last_archived_wal, '.', 1), 16) AS pg_catalog.bit(64)) AS pg_catalog.int8), -1) AS last_archived_wal_start_lsn
+            , COALESCE(CAST(CAST('x'||pg_catalog.right(pg_catalog.split_part(last_failed_wal, '.', 1), 16) AS pg_catalog.bit(64)) AS pg_catalog.int8), -1) AS last_failed_wal_start_lsn
+            , EXTRACT(EPOCH FROM stats_reset) AS stats_reset_time
+          FROM pg_catalog.pg_stat_archiver
+        metrics:
+          - archived_count:
+              usage: "COUNTER"
+              description: "Number of WAL files that have been successfully archived"
+          - failed_count:
+              usage: "COUNTER"
+              description: "Number of failed attempts for archiving WAL files"
+          - seconds_since_last_archival:
+              usage: "GAUGE"
+              description: "Seconds since the last successful archival operation"
+          - seconds_since_last_failure:
+              usage: "GAUGE"
+              description: "Seconds since the last failed archival operation"
+          - last_archived_time:
+              usage: "GAUGE"
+              description: "Epoch of the last time WAL archiving succeeded"
+          - last_failed_time:
+              usage: "GAUGE"
+              description: "Epoch of the last time WAL archiving failed"
+          - last_archived_wal_start_lsn:
+              usage: "GAUGE"
+              description: "Archived WAL start LSN"
+          - last_failed_wal_start_lsn:
+              usage: "GAUGE"
+              description: "Last failed WAL LSN"
+          - stats_reset_time:
+              usage: "GAUGE"
+              description: "Time at which these statistics were last reset"
+
+      pg_stat_bgwriter:
+        runonserver: "<17.0.0"
+        query: |
+          SELECT checkpoints_timed
+            , checkpoints_req
+            , checkpoint_write_time
+            , checkpoint_sync_time
+            , buffers_checkpoint
+            , buffers_clean
+            , maxwritten_clean
+            , buffers_backend
+            , buffers_backend_fsync
+            , buffers_alloc
+          FROM pg_catalog.pg_stat_bgwriter
+        metrics:
+          - checkpoints_timed:
+              usage: "COUNTER"
+              description: "Number of scheduled checkpoints that have been performed"
+          - checkpoints_req:
+              usage: "COUNTER"
+              description: "Number of requested checkpoints that have been performed"
+          - checkpoint_write_time:
+              usage: "COUNTER"
+              description: "Total amount of time that has been spent in the portion of checkpoint processing where files are written to disk, in milliseconds"
+          - checkpoint_sync_time:
+              usage: "COUNTER"
+              description: "Total amount of time that has been spent in the portion of checkpoint processing where files are synchronized to disk, in milliseconds"
+          - buffers_checkpoint:
+              usage: "COUNTER"
+              description: "Number of buffers written during checkpoints"
+          - buffers_clean:
+              usage: "COUNTER"
+              description: "Number of buffers written by the background writer"
+          - maxwritten_clean:
+              usage: "COUNTER"
+              description: "Number of times the background writer stopped a cleaning scan because it had written too many buffers"
+          - buffers_backend:
+              usage: "COUNTER"
+              description: "Number of buffers written directly by a backend"
+          - buffers_backend_fsync:
+              usage: "COUNTER"
+              description: "Number of times a backend had to execute its own fsync call (normally the background writer handles those even when the backend does its own write)"
+          - buffers_alloc:
+              usage: "COUNTER"
+              description: "Number of buffers allocated"
+
+      pg_stat_bgwriter_17:
+        runonserver: ">=17.0.0"
+        name: pg_stat_bgwriter
+        query: |
+          SELECT buffers_clean
+            , maxwritten_clean
+            , buffers_alloc
+            , EXTRACT(EPOCH FROM stats_reset) AS stats_reset_time
+          FROM pg_catalog.pg_stat_bgwriter
+        metrics:
+          - buffers_clean:
+              usage: "COUNTER"
+              description: "Number of buffers written by the background writer"
+          - maxwritten_clean:
+              usage: "COUNTER"
+              description: "Number of times the background writer stopped a cleaning scan because it had written too many buffers"
+          - buffers_alloc:
+              usage: "COUNTER"
+              description: "Number of buffers allocated"
+          - stats_reset_time:
+              usage: "GAUGE"
+              description: "Time at which these statistics were last reset"
+
+      pg_stat_checkpointer:
+        runonserver: ">=17.0.0"
+        query: |
+          SELECT num_timed AS checkpoints_timed
+            , num_requested AS checkpoints_req
+            , restartpoints_timed
+            , restartpoints_req
+            , restartpoints_done
+            , write_time
+            , sync_time
+            , buffers_written
+            , EXTRACT(EPOCH FROM stats_reset) AS stats_reset_time
+          FROM pg_catalog.pg_stat_checkpointer
+        metrics:
+          - checkpoints_timed:
+              usage: "COUNTER"
+              description: "Number of scheduled checkpoints that have been performed"
+          - checkpoints_req:
+              usage: "COUNTER"
+              description: "Number of requested checkpoints that have been performed"
+          - restartpoints_timed:
+              usage: "COUNTER"
+              description: "Number of scheduled restartpoints due to timeout or after a failed attempt to perform it"
+          - restartpoints_req:
+              usage: "COUNTER"
+              description: "Number of requested restartpoints that have been performed"
+          - restartpoints_done:
+              usage: "COUNTER"
+              description: "Number of restartpoints that have been performed"
+          - write_time:
+              usage: "COUNTER"
+              description: "Total amount of time that has been spent in the portion of processing checkpoints and restartpoints where files are written to disk, in milliseconds"
+          - sync_time:
+              usage: "COUNTER"
+              description: "Total amount of time that has been spent in the portion of processing checkpoints and restartpoints where files are synchronized to disk, in milliseconds"
+          - buffers_written:
+              usage: "COUNTER"
+              description: "Number of buffers written during checkpoints and restartpoints"
+          - stats_reset_time:
+              usage: "GAUGE"
+              description: "Time at which these statistics were last reset"
+
+      pg_stat_database:
+        query: |
+          SELECT datname
+            , xact_commit
+            , xact_rollback
+            , blks_read
+            , blks_hit
+            , tup_returned
+            , tup_fetched
+            , tup_inserted
+            , tup_updated
+            , tup_deleted
+            , conflicts
+            , temp_files
+            , temp_bytes
+            , deadlocks
+            , blk_read_time
+            , blk_write_time
+          FROM pg_catalog.pg_stat_database
+        metrics:
+          - datname:
+              usage: "LABEL"
+              description: "Name of this database"
+          - xact_commit:
+              usage: "COUNTER"
+              description: "Number of transactions in this database that have been committed"
+          - xact_rollback:
+              usage: "COUNTER"
+              description: "Number of transactions in this database that have been rolled back"
+          - blks_read:
+              usage: "COUNTER"
+              description: "Number of disk blocks read in this database"
+          - blks_hit:
+              usage: "COUNTER"
+              description: "Number of times disk blocks were found already in the buffer cache, so that a read was not necessary (this only includes hits in the PostgreSQL buffer cache, not the operating system's file system cache)"
+          - tup_returned:
+              usage: "COUNTER"
+              description: "Number of rows returned by queries in this database"
+          - tup_fetched:
+              usage: "COUNTER"
+              description: "Number of rows fetched by queries in this database"
+          - tup_inserted:
+              usage: "COUNTER"
+              description: "Number of rows inserted by queries in this database"
+          - tup_updated:
+              usage: "COUNTER"
+              description: "Number of rows updated by queries in this database"
+          - tup_deleted:
+              usage: "COUNTER"
+              description: "Number of rows deleted by queries in this database"
+          - conflicts:
+              usage: "COUNTER"
+              description: "Number of queries canceled due to conflicts with recovery in this database"
+          - temp_files:
+              usage: "COUNTER"
+              description: "Number of temporary files created by queries in this database"
+          - temp_bytes:
+              usage: "COUNTER"
+              description: "Total amount of data written to temporary files by queries in this database"
+          - deadlocks:
+              usage: "COUNTER"
+              description: "Number of deadlocks detected in this database"
+          - blk_read_time:
+              usage: "COUNTER"
+              description: "Time spent reading data file blocks by backends in this database, in milliseconds"
+          - blk_write_time:
+              usage: "COUNTER"
+              description: "Time spent writing data file blocks by backends in this database, in milliseconds"
+
+      pg_stat_replication:
+        primary: true
+        query: |
+         SELECT usename
+           , COALESCE(application_name, '') AS application_name
+           , COALESCE(client_addr::text, '') AS client_addr
+           , COALESCE(client_port::text, '') AS client_port
+           , EXTRACT(EPOCH FROM backend_start) AS backend_start
+           , COALESCE(pg_catalog.age(backend_xmin), 0) AS backend_xmin_age
+           , pg_catalog.pg_wal_lsn_diff(pg_catalog.pg_current_wal_lsn(), sent_lsn) AS sent_diff_bytes
+           , pg_catalog.pg_wal_lsn_diff(pg_catalog.pg_current_wal_lsn(), write_lsn) AS write_diff_bytes
+           , pg_catalog.pg_wal_lsn_diff(pg_catalog.pg_current_wal_lsn(), flush_lsn) AS flush_diff_bytes
+           , COALESCE(pg_catalog.pg_wal_lsn_diff(pg_catalog.pg_current_wal_lsn(), replay_lsn),0) AS replay_diff_bytes
+           , COALESCE((EXTRACT(EPOCH FROM write_lag)),0)::float AS write_lag_seconds
+           , COALESCE((EXTRACT(EPOCH FROM flush_lag)),0)::float AS flush_lag_seconds
+           , COALESCE((EXTRACT(EPOCH FROM replay_lag)),0)::float AS replay_lag_seconds
+         FROM pg_catalog.pg_stat_replication
+        metrics:
+          - usename:
+              usage: "LABEL"
+              description: "Name of the replication user"
+          - application_name:
+              usage: "LABEL"
+              description: "Name of the application"
+          - client_addr:
+              usage: "LABEL"
+              description: "Client IP address"
+          - client_port:
+              usage: "LABEL"
+              description: "Client TCP port"
+          - backend_start:
+              usage: "COUNTER"
+              description: "Time when this process was started"
+          - backend_xmin_age:
+              usage: "COUNTER"
+              description: "The age of this standby's xmin horizon"
+          - sent_diff_bytes:
+              usage: "GAUGE"
+              description: "Difference in bytes from the last write-ahead log location sent on this connection"
+          - write_diff_bytes:
+              usage: "GAUGE"
+              description: "Difference in bytes from the last write-ahead log location written to disk by this standby server"
+          - flush_diff_bytes:
+              usage: "GAUGE"
+              description: "Difference in bytes from the last write-ahead log location flushed to disk by this standby server"
+          - replay_diff_bytes:
+              usage: "GAUGE"
+              description: "Difference in bytes from the last write-ahead log location replayed into the database on this standby server"
+          - write_lag_seconds:
+              usage: "GAUGE"
+              description: "Time elapsed between flushing recent WAL locally and receiving notification that this standby server has written it"
+          - flush_lag_seconds:
+              usage: "GAUGE"
+              description: "Time elapsed between flushing recent WAL locally and receiving notification that this standby server has written and flushed it"
+          - replay_lag_seconds:
+              usage: "GAUGE"
+              description: "Time elapsed between flushing recent WAL locally and receiving notification that this standby server has written, flushed and applied it"
+
+      pg_settings:
+        query: |
+          SELECT name,
+          CASE setting WHEN 'on' THEN '1' WHEN 'off' THEN '0' ELSE setting END AS setting
+          FROM pg_catalog.pg_settings
+          WHERE vartype IN ('integer', 'real', 'bool')
+          ORDER BY 1
+        metrics:
+          - name:
+              usage: "LABEL"
+              description: "Name of the setting"
+          - setting:
+              usage: "GAUGE"
+              description: "Setting value"
+
+      pg_extensions:
+        query: |
+          SELECT
+           current_database() as datname,
+           name as extname,
+           default_version,
+           installed_version,
+           CASE
+             WHEN default_version = installed_version THEN 0
+             ELSE 1
+          END AS update_available
+          FROM pg_catalog.pg_available_extensions
+          WHERE installed_version IS NOT NULL
+        metrics:
+          - datname:
+              usage: "LABEL"
+              description: "Name of the database"
+          - extname:
+              usage: "LABEL"
+              description: "Extension name"
+          - default_version:
+              usage: "LABEL"
+              description: "Default version"
+          - installed_version:
+              usage: "LABEL"
+              description: "Installed version"
+          - update_available:
+              usage: "GAUGE"
+              description: "An update is available"
+        target_databases:
+          - '*'
+  kind: ConfigMap
+  metadata:
+    annotations:
+      cnpg.io/operatorVersion: 1.27.1
+    creationTimestamp: "2025-11-07T10:00:04Z"
+    labels:
+      cnpg.io/reload: "true"
+    name: cnpg-default-monitoring
+    namespace: bitpin-task
+    resourceVersion: "20530"
+    uid: 65c5ff19-7020-4252-b646-8051670df1e3
+- apiVersion: v1
+  data:
+    ca.crt: |
+      -----BEGIN CERTIFICATE-----
+      MIIBdjCCAR2gAwIBAgIBADAKBggqhkjOPQQDAjAjMSEwHwYDVQQDDBhrM3Mtc2Vy
+      dmVyLWNhQDE3NjI0OTMxMTcwHhcNMjUxMTA3MDUyNTE3WhcNMzUxMTA1MDUyNTE3
+      WjAjMSEwHwYDVQQDDBhrM3Mtc2VydmVyLWNhQDE3NjI0OTMxMTcwWTATBgcqhkjO
+      PQIBBggqhkjOPQMBBwNCAAR5VfR2ARsMPNt/gGSEO5MjivaVs+MRl9srDgOpNv2k
+      kwE5Trcmmg8hm2XiajWWCbDiwxnG7zANuH05BkKMM6C3o0IwQDAOBgNVHQ8BAf8E
+      BAMCAqQwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQU8S5Jx7VtFomYaPKIfCVP
+      +pgL4dAwCgYIKoZIzj0EAwIDRwAwRAIgHoDbY+PY8bw/BG46jxtrBavSRw7Z6SSV
+      uzCUHkYB8ncCIBVT9+8PCvrZkPuKJx9SAITUoggxqcp6/1TXL8OCCZkD
+      -----END CERTIFICATE-----
+  kind: ConfigMap
+  metadata:
+    annotations:
+      kubernetes.io/description: Contains a CA bundle that can be used to verify the
+        kube-apiserver when using internal endpoints such as the internal service
+        IP or kubernetes.default.svc. No other usage is guaranteed across distributions
+        of Kubernetes clusters.
+    creationTimestamp: "2025-11-07T10:00:03Z"
+    name: kube-root-ca.crt
+    namespace: bitpin-task
+    resourceVersion: "20487"
+    uid: 99ecc6d1-d3d4-4c73-92bc-82f4fe57c588
+- apiVersion: v1
+  data:
+    .pgpass: |
+      bitpin-cluster-rw.bitpin-task.svc.cluster.local:5432:bitpin_db:bitpin_user:jyoUv5DqaAyqFr4UTvakX6N5DcsCsiHDRqau0YH3cXjXD9pd4FL8lnMDltnaax9s
+  kind: ConfigMap
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","data":{".pgpass":"bitpin-cluster-rw.bitpin-task.svc.cluster.local:5432:bitpin_db:bitpin_user:jyoUv5DqaAyqFr4UTvakX6N5DcsCsiHDRqau0YH3cXjXD9pd4FL8lnMDltnaax9s\n"},"kind":"ConfigMap","metadata":{"annotations":{},"name":"pgpass-config","namespace":"bitpin-task"}}
+    creationTimestamp: "2025-11-08T08:07:25Z"
+    name: pgpass-config
+    namespace: bitpin-task
+    resourceVersion: "135958"
+    uid: 8ccfc57e-85ba-40d4-a797-ce97e312c0f4
+- apiVersion: v1
+  data:
+    dbname: Yml0cGluX2Ri
+    fqdn-jdbc-uri: amRiYzpwb3N0Z3Jlc3FsOi8vYml0cGluLWNsdXN0ZXItcncuYml0cGluLXRhc2suc3ZjLmNsdXN0ZXIubG9jYWw6NTQzMi9iaXRwaW5fZGI/cGFzc3dvcmQ9anlvVXY1RHFhQXlxRnI0VVR2YWtYNk41RGNzQ3NpSERScWF1MFlIM2NYalhEOXBkNEZMOGxuTURsdG5hYXg5cyZ1c2VyPWJpdHBpbl91c2Vy
+    fqdn-uri: cG9zdGdyZXNxbDovL2JpdHBpbl91c2VyOmp5b1V2NURxYUF5cUZyNFVUdmFrWDZONURjc0NzaUhEUnFhdTBZSDNjWGpYRDlwZDRGTDhsbk1EbHRuYWF4OXNAYml0cGluLWNsdXN0ZXItcncuYml0cGluLXRhc2suc3ZjLmNsdXN0ZXIubG9jYWw6NTQzMi9iaXRwaW5fZGI=
+    host: Yml0cGluLWNsdXN0ZXItcnc=
+    jdbc-uri: amRiYzpwb3N0Z3Jlc3FsOi8vYml0cGluLWNsdXN0ZXItcncuYml0cGluLXRhc2s6NTQzMi9iaXRwaW5fZGI/cGFzc3dvcmQ9anlvVXY1RHFhQXlxRnI0VVR2YWtYNk41RGNzQ3NpSERScWF1MFlIM2NYalhEOXBkNEZMOGxuTURsdG5hYXg5cyZ1c2VyPWJpdHBpbl91c2Vy
+    password: anlvVXY1RHFhQXlxRnI0VVR2YWtYNk41RGNzQ3NpSERScWF1MFlIM2NYalhEOXBkNEZMOGxuTURsdG5hYXg5cw==
+    pgpass: Yml0cGluLWNsdXN0ZXItcnc6NTQzMjpiaXRwaW5fZGI6Yml0cGluX3VzZXI6anlvVXY1RHFhQXlxRnI0VVR2YWtYNk41RGNzQ3NpSERScWF1MFlIM2NYalhEOXBkNEZMOGxuTURsdG5hYXg5cwo=
+    port: NTQzMg==
+    uri: cG9zdGdyZXNxbDovL2JpdHBpbl91c2VyOmp5b1V2NURxYUF5cUZyNFVUdmFrWDZONURjc0NzaUhEUnFhdTBZSDNjWGpYRDlwZDRGTDhsbk1EbHRuYWF4OXNAYml0cGluLWNsdXN0ZXItcncuYml0cGluLXRhc2s6NTQzMi9iaXRwaW5fZGI=
+    user: Yml0cGluX3VzZXI=
+    username: Yml0cGluX3VzZXI=
+  kind: Secret
+  metadata:
+    annotations:
+      cnpg.io/operatorVersion: 1.27.1
+    creationTimestamp: "2025-11-07T10:00:03Z"
+    labels:
+      cnpg.io/cluster: bitpin-cluster
+      cnpg.io/reload: "true"
+      cnpg.io/userType: app
+    name: bitpin-cluster-app
+    namespace: bitpin-task
+    ownerReferences:
+    - apiVersion: postgresql.cnpg.io/v1
+      controller: true
+      kind: Cluster
+      name: bitpin-cluster
+      uid: 1a43e070-4777-4a29-858a-c9313ba36c4a
+    resourceVersion: "20503"
+    uid: aacb6d6b-d646-4550-aa8d-fc5340b2b715
+  type: kubernetes.io/basic-auth
+- apiVersion: v1
+  data:
+    ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJuakNDQVVXZ0F3SUJBZ0lSQUlMYmt3YVJCOGJLeGVvemxCRTdBaXN3Q2dZSUtvWkl6ajBFQXdJd0x6RVUKTUJJR0ExVUVDeE1MWW1sMGNHbHVMWFJoYzJzeEZ6QVZCZ05WQkFNVERtSnBkSEJwYmkxamJIVnpkR1Z5TUI0WApEVEkxTVRFd056QTVOVFV3TTFvWERUSTJNREl3TlRBNU5UVXdNMW93THpFVU1CSUdBMVVFQ3hNTFltbDBjR2x1CkxYUmhjMnN4RnpBVkJnTlZCQU1URG1KcGRIQnBiaTFqYkhWemRHVnlNRmt3RXdZSEtvWkl6ajBDQVFZSUtvWkkKemowREFRY0RRZ0FFQUxTMFVzY0hpS1o3SkZoRlJIRHNqWldTRGdMM3dneWdYVWZFeW5vZnB2bXpqMGZnaXVnRQozRFZmZnRKd29UK3pqUXo0ZDdyNXhTWUhjMGI3Z2JMMFRhTkNNRUF3RGdZRFZSMFBBUUgvQkFRREFnSUVNQThHCkExVWRFd0VCL3dRRk1BTUJBZjh3SFFZRFZSME9CQllFRkh2TkF5Sy9udFNNQmYvdGlzdkhXWFBEZ1AyZU1Bb0cKQ0NxR1NNNDlCQU1DQTBjQU1FUUNJRXNzbU94cmVRd1F5dHVKOEl3UGVMKzErYXAxQmN6bFpNcmFXRElmUFBSVQpBaUErUHNTcnNoY2h5L0tBaXdsQnpsUXc2MDJPN1FKbXhLT1hYaThxVU9LNXBnPT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+    ca.key: LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1IY0NBUUVFSUhvRGNDb0xKa1A4MlJFeGMrdVhQMjVwckRiZDNHaGhNZ2V5RmNIZm92TzNvQW9HQ0NxR1NNNDkKQXdFSG9VUURRZ0FFQUxTMFVzY0hpS1o3SkZoRlJIRHNqWldTRGdMM3dneWdYVWZFeW5vZnB2bXpqMGZnaXVnRQozRFZmZnRKd29UK3pqUXo0ZDdyNXhTWUhjMGI3Z2JMMFRRPT0KLS0tLS1FTkQgRUMgUFJJVkFURSBLRVktLS0tLQo=
+  kind: Secret
+  metadata:
+    creationTimestamp: "2025-11-07T10:00:03Z"
+    name: bitpin-cluster-ca
+    namespace: bitpin-task
+    ownerReferences:
+    - apiVersion: postgresql.cnpg.io/v1
+      controller: true
+      kind: Cluster
+      name: bitpin-cluster
+      uid: 1a43e070-4777-4a29-858a-c9313ba36c4a
+    resourceVersion: "20500"
+    uid: 1cf8baf2-bbd3-4b35-8419-697d3b2a92c7
+  type: Opaque
+- apiVersion: v1
+  data:
+    tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJvRENDQVVhZ0F3SUJBZ0lSQU92S0JBUUR6VVphZEZlaHZwWk5HaU13Q2dZSUtvWkl6ajBFQXdJd0x6RVUKTUJJR0ExVUVDeE1MWW1sMGNHbHVMWFJoYzJzeEZ6QVZCZ05WQkFNVERtSnBkSEJwYmkxamJIVnpkR1Z5TUI0WApEVEkxTVRFd056QTVOVFV3TTFvWERUSTJNREl3TlRBNU5UVXdNMW93SERFYU1CZ0dBMVVFQXd3UmMzUnlaV0Z0CmFXNW5YM0psY0d4cFkyRXdXVEFUQmdjcWhrak9QUUlCQmdncWhrak9QUU1CQndOQ0FBUXZZa3BDbzk3Vk5KU1kKN2x3aVNBSHpuMlJrbFAzdVlkMU5xN3pwbE9IM2VEenhJOU8xTnF1T3NsVUp5L05WbDZXVFZTaHNmSHhaVEw2QQo4K1J6VHpvYm8xWXdWREFPQmdOVkhROEJBZjhFQkFNQ0E0Z3dFd1lEVlIwbEJBd3dDZ1lJS3dZQkJRVUhBd0l3CkRBWURWUjBUQVFIL0JBSXdBREFmQmdOVkhTTUVHREFXZ0JSN3pRTWl2NTdVakFYLzdZckx4MWx6dzREOW5qQUsKQmdncWhrak9QUVFEQWdOSUFEQkZBaUFTVUZpdUp2MXl4Y01OY3dRenhIVWpFcGZPV0NVTjE2QVZhSVV4RnhWQgpQUUloQUsyTjBOSE9GQTBsb2xEYVpBK0t6VzhkSjFIbUtnZmhaNU5qdDk2Sk1kdWwKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+    tls.key: LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1IY0NBUUVFSUtIUTI2ZEZFZTh2LzFOSm55SEhRRnZnUFQrY0V4djBuYTdpMFJMUTRib3VvQW9HQ0NxR1NNNDkKQXdFSG9VUURRZ0FFTDJKS1FxUGUxVFNVbU81Y0lrZ0I4NTlrWkpUOTdtSGRUYXU4NlpUaDkzZzg4U1BUdFRhcgpqckpWQ2N2elZaZWxrMVVvYkh4OFdVeStnUFBrYzA4Nkd3PT0KLS0tLS1FTkQgRUMgUFJJVkFURSBLRVktLS0tLQo=
+  kind: Secret
+  metadata:
+    creationTimestamp: "2025-11-07T10:00:03Z"
+    name: bitpin-cluster-replication
+    namespace: bitpin-task
+    ownerReferences:
+    - apiVersion: postgresql.cnpg.io/v1
+      controller: true
+      kind: Cluster
+      name: bitpin-cluster
+      uid: 1a43e070-4777-4a29-858a-c9313ba36c4a
+    resourceVersion: "20502"
+    uid: 484fb42f-c9e4-4cca-81ba-21bf6b31344e
+  type: kubernetes.io/tls
+- apiVersion: v1
+  data:
+    tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURSRENDQXVtZ0F3SUJBZ0lSQUw5djNZd1pMRDlEK3Z5N0lHM1AwL0V3Q2dZSUtvWkl6ajBFQXdJd0x6RVUKTUJJR0ExVUVDeE1MWW1sMGNHbHVMWFJoYzJzeEZ6QVZCZ05WQkFNVERtSnBkSEJwYmkxamJIVnpkR1Z5TUI0WApEVEkxTVRFd056QTVOVFV3TTFvWERUSTJNREl3TlRBNU5UVXdNMW93SERFYU1CZ0dBMVVFQXhNUlltbDBjR2x1CkxXTnNkWE4wWlhJdGNuY3dXVEFUQmdjcWhrak9QUUlCQmdncWhrak9QUU1CQndOQ0FBVEpHZ2ZWUHZyM085Nm8KdFZ3SU5udm5jOGhTU3V6V3BTbDRzN082blVpUnJMQlVlS1ZSRXRkWTJIbTBSdjlicVp6OWVidGxlYjBKbjZvRQpad0VLaXdRZm80SUI5ekNDQWZNd0RnWURWUjBQQVFIL0JBUURBZ09vTUJNR0ExVWRKUVFNTUFvR0NDc0dBUVVGCkJ3TUJNQXdHQTFVZEV3RUIvd1FDTUFBd0h3WURWUjBqQkJnd0ZvQVVlODBESXIrZTFJd0YvKzJLeThkWmM4T0EKL1o0d2dnR2JCZ05WSFJFRWdnR1NNSUlCam9JUlltbDBjR2x1TFdOc2RYTjBaWEl0Y25lQ0hXSnBkSEJwYmkxagpiSFZ6ZEdWeUxYSjNMbUpwZEhCcGJpMTBZWE5yZ2lGaWFYUndhVzR0WTJ4MWMzUmxjaTF5ZHk1aWFYUndhVzR0CmRHRnpheTV6ZG1PQ0wySnBkSEJwYmkxamJIVnpkR1Z5TFhKM0xtSnBkSEJwYmkxMFlYTnJMbk4yWXk1amJIVnoKZEdWeUxteHZZMkZzZ2hCaWFYUndhVzR0WTJ4MWMzUmxjaTF5Z2h4aWFYUndhVzR0WTJ4MWMzUmxjaTF5TG1KcApkSEJwYmkxMFlYTnJnaUJpYVhSd2FXNHRZMngxYzNSbGNpMXlMbUpwZEhCcGJpMTBZWE5yTG5OMlk0SXVZbWwwCmNHbHVMV05zZFhOMFpYSXRjaTVpYVhSd2FXNHRkR0Z6YXk1emRtTXVZMngxYzNSbGNpNXNiMk5oYklJUlltbDAKY0dsdUxXTnNkWE4wWlhJdGNtK0NIV0pwZEhCcGJpMWpiSFZ6ZEdWeUxYSnZMbUpwZEhCcGJpMTBZWE5yZ2lGaQphWFJ3YVc0dFkyeDFjM1JsY2kxeWJ5NWlhWFJ3YVc0dGRHRnpheTV6ZG1PQ0wySnBkSEJwYmkxamJIVnpkR1Z5CkxYSnZMbUpwZEhCcGJpMTBZWE5yTG5OMll5NWpiSFZ6ZEdWeUxteHZZMkZzTUFvR0NDcUdTTTQ5QkFNQ0Ewa0EKTUVZQ0lRRGRGKzQ5UjVKTkVEckJZM3FsT2VnT0VnajBqVU1CSTIrOTNMUCtxSStqSVFJaEFKWVNpMVdVQmR3VAova3dac245N245dGR5QWd2NmZWSXJjOFQ3a0RzSHRFUAotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+    tls.key: LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1IY0NBUUVFSUtoK09iUzVaZ1laSi95NStDRWN3eWxNaEd2bkRzYmF3MmpsUWFpbUxJc05vQW9HQ0NxR1NNNDkKQXdFSG9VUURRZ0FFeVJvSDFUNzY5enZlcUxWY0NEWjc1M1BJVWtyczFxVXBlTE96dXAxSWtheXdWSGlsVVJMWApXTmg1dEViL1c2bWMvWG03WlhtOUNaK3FCR2NCQ29zRUh3PT0KLS0tLS1FTkQgRUMgUFJJVkFURSBLRVktLS0tLQo=
+  kind: Secret
+  metadata:
+    creationTimestamp: "2025-11-07T10:00:03Z"
+    name: bitpin-cluster-server
+    namespace: bitpin-task
+    ownerReferences:
+    - apiVersion: postgresql.cnpg.io/v1
+      controller: true
+      kind: Cluster
+      name: bitpin-cluster
+      uid: 1a43e070-4777-4a29-858a-c9313ba36c4a
+    resourceVersion: "20501"
+    uid: cb11ae7b-adac-4b4d-8f8a-e08800fd0a91
+  type: kubernetes.io/tls
+- apiVersion: v1
+  data:
+    password: Yml0cGluX3Bhc3N3b3Jk
+    username: Yml0cGluX3VzZXI=
+  kind: Secret
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"Secret","metadata":{"annotations":{},"name":"pg-secret","namespace":"bitpin-task"},"stringData":{"password":"bitpin_password","username":"bitpin_user"},"type":"Opaque"}
+    creationTimestamp: "2025-11-07T10:00:03Z"
+    name: pg-secret
+    namespace: bitpin-task
+    resourceVersion: "20488"
+    uid: a0c7b5eb-b3d7-4b66-a766-2b914495dd72
+  type: Opaque
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"PersistentVolumeClaim","metadata":{"annotations":{},"name":"backup-pvc","namespace":"bitpin-task"},"spec":{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"20Gi"}},"storageClassName":"local-storage"}}
+      pv.kubernetes.io/bind-completed: "yes"
+      pv.kubernetes.io/bound-by-controller: "yes"
+    creationTimestamp: "2025-11-08T08:12:51Z"
+    finalizers:
+    - kubernetes.io/pvc-protection
+    name: backup-pvc
+    namespace: bitpin-task
+    resourceVersion: "136512"
+    uid: abb4f0ce-d148-438b-ac1c-368dbaf7805a
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: 20Gi
+    storageClassName: local-storage
+    volumeMode: Filesystem
+    volumeName: backup-pv
+  status:
+    accessModes:
+    - ReadWriteOnce
+    capacity:
+      storage: 20Gi
+    phase: Bound
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    annotations:
+      cnpg.io/nodeSerial: "1"
+      cnpg.io/operatorVersion: 1.27.1
+      cnpg.io/pvcStatus: ready
+      pv.kubernetes.io/bind-completed: "yes"
+      pv.kubernetes.io/bound-by-controller: "yes"
+    creationTimestamp: "2025-11-07T10:00:04Z"
+    finalizers:
+    - kubernetes.io/pvc-protection
+    labels:
+      cnpg.io/cluster: bitpin-cluster
+      cnpg.io/instanceName: bitpin-cluster-1
+      cnpg.io/instanceRole: primary
+      cnpg.io/pvcRole: PG_DATA
+      role: primary
+    name: bitpin-cluster-1
+    namespace: bitpin-task
+    ownerReferences:
+    - apiVersion: postgresql.cnpg.io/v1
+      controller: true
+      kind: Cluster
+      name: bitpin-cluster
+      uid: 1a43e070-4777-4a29-858a-c9313ba36c4a
+    resourceVersion: "20607"
+    uid: c343e1ba-0fa5-4359-9b6d-803fb12565b0
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: 5Gi
+    storageClassName: ""
+    volumeMode: Filesystem
+    volumeName: pv-bitpin-primary
+  status:
+    accessModes:
+    - ReadWriteOnce
+    capacity:
+      storage: 5Gi
+    phase: Bound
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    annotations:
+      cnpg.io/nodeSerial: "2"
+      cnpg.io/operatorVersion: 1.27.1
+      cnpg.io/pvcStatus: ready
+      pv.kubernetes.io/bind-completed: "yes"
+      pv.kubernetes.io/bound-by-controller: "yes"
+    creationTimestamp: "2025-11-07T10:00:25Z"
+    finalizers:
+    - kubernetes.io/pvc-protection
+    labels:
+      cnpg.io/cluster: bitpin-cluster
+      cnpg.io/instanceName: bitpin-cluster-2
+      cnpg.io/instanceRole: replica
+      cnpg.io/pvcRole: PG_DATA
+      role: replica
+    name: bitpin-cluster-2
+    namespace: bitpin-task
+    ownerReferences:
+    - apiVersion: postgresql.cnpg.io/v1
+      controller: true
+      kind: Cluster
+      name: bitpin-cluster
+      uid: 1a43e070-4777-4a29-858a-c9313ba36c4a
+    resourceVersion: "20688"
+    uid: ee937a46-8368-439a-8d03-4e56266bb275
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: 5Gi
+    storageClassName: ""
+    volumeMode: Filesystem
+    volumeName: pv-bitpin-replica
+  status:
+    accessModes:
+    - ReadWriteOnce
+    capacity:
+      storage: 5Gi
+    phase: Bound
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"PersistentVolumeClaim","metadata":{"annotations":{},"name":"pvc-bitpin-primary","namespace":"bitpin-task"},"spec":{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"5Gi"}},"volumeName":"pv-bitpin-primary"}}
+    creationTimestamp: "2025-11-07T10:00:03Z"
+    finalizers:
+    - kubernetes.io/pvc-protection
+    name: pvc-bitpin-primary
+    namespace: bitpin-task
+    resourceVersion: "20494"
+    uid: 2cb88f72-8ffb-4484-bb24-b33665d76963
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: 5Gi
+    storageClassName: local-path
+    volumeMode: Filesystem
+    volumeName: pv-bitpin-primary
+  status:
+    phase: Pending
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"PersistentVolumeClaim","metadata":{"annotations":{},"name":"pvc-bitpin-replica","namespace":"bitpin-task"},"spec":{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"5Gi"}},"volumeName":"pv-bitpin-replica"}}
+    creationTimestamp: "2025-11-07T10:00:03Z"
+    finalizers:
+    - kubernetes.io/pvc-protection
+    name: pvc-bitpin-replica
+    namespace: bitpin-task
+    resourceVersion: "20496"
+    uid: e2b6c8ce-a9b5-4e21-9776-824ff565f630
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: 5Gi
+    storageClassName: local-path
+    volumeMode: Filesystem
+    volumeName: pv-bitpin-replica
+  status:
+    phase: Pending
+- apiVersion: networking.k8s.io/v1
+  kind: Ingress
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"networking.k8s.io/v1","kind":"Ingress","metadata":{"annotations":{"kubernetes.io/ingress.class":"traefik"},"name":"bitpin","namespace":"bitpin-task"},"spec":{"rules":[{"host":"bitpin.local","http":{"paths":[{"backend":{"service":{"name":"bitpin-service","port":{"number":80}}},"path":"/","pathType":"Prefix"}]}}]}}
+      kubernetes.io/ingress.class: traefik
+    creationTimestamp: "2025-11-07T15:23:23Z"
+    generation: 1
+    name: bitpin
+    namespace: bitpin-task
+    resourceVersion: "48888"
+    uid: 317f3190-5f2d-4a97-ab53-de5e67adaebc
+  spec:
+    rules:
+    - host: bitpin.local
+      http:
+        paths:
+        - backend:
+            service:
+              name: bitpin-service
+              port:
+                number: 80
+          path: /
+          pathType: Prefix
+  status:
+    loadBalancer:
+      ingress:
+      - ip: 10.33.3.42
+- apiVersion: networking.k8s.io/v1
+  kind: Ingress
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"networking.k8s.io/v1","kind":"Ingress","metadata":{"annotations":{},"name":"bitpin-app-ingress","namespace":"bitpin-task"},"spec":{"ingressClassName":"nginx","rules":[{"host":"bitpin.local","http":{"paths":[{"backend":{"service":{"name":"bitpin-app-svc","port":{"number":80}}},"path":"/","pathType":"Prefix"}]}}]}}
+    creationTimestamp: "2025-11-07T13:51:42Z"
+    generation: 3
+    name: bitpin-app-ingress
+    namespace: bitpin-task
+    resourceVersion: "45366"
+    uid: 15c2171b-8f51-4152-a651-0f30ab6f3563
+  spec:
+    ingressClassName: nginx
+    rules:
+    - host: bitpin.local
+      http:
+        paths:
+        - backend:
+            service:
+              name: bitpin-app-svc
+              port:
+                number: 80
+          path: /
+          pathType: Prefix
+  status:
+    loadBalancer:
+      ingress:
+      - ip: 10.33.3.42
+- apiVersion: networking.k8s.io/v1
+  kind: Ingress
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"networking.k8s.io/v1","kind":"Ingress","metadata":{"annotations":{"kubernetes.io/ingress.class":"traefik"},"name":"bitpin-ingress","namespace":"bitpin-task"},"spec":{"rules":[{"host":"bitpin.local","http":{"paths":[{"backend":{"service":{"name":"bitpin-app-svc","port":{"number":80}}},"path":"/","pathType":"Prefix"}]}}]}}
+      kubernetes.io/ingress.class: traefik
+    creationTimestamp: "2025-11-07T15:25:03Z"
+    generation: 1
+    name: bitpin-ingress
+    namespace: bitpin-task
+    resourceVersion: "49030"
+    uid: 25b031a5-b0b5-4c11-acfb-fab8030b7896
+  spec:
+    rules:
+    - host: bitpin.local
+      http:
+        paths:
+        - backend:
+            service:
+              name: bitpin-app-svc
+              port:
+                number: 80
+          path: /
+          pathType: Prefix
+  status:
+    loadBalancer:
+      ingress:
+      - ip: 10.33.3.42
+kind: List
+metadata:
+  resourceVersion: ""
