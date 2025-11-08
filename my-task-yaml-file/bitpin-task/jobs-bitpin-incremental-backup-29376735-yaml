@@ -1,0 +1,122 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  annotations:
+    batch.kubernetes.io/cronjob-scheduled-timestamp: "2025-11-08T12:15:00Z"
+  creationTimestamp: "2025-11-08T12:15:00Z"
+  generation: 1
+  labels:
+    batch.kubernetes.io/controller-uid: fee92719-45bd-4422-9d48-62779621c094
+    batch.kubernetes.io/job-name: bitpin-incremental-backup-29376735
+    controller-uid: fee92719-45bd-4422-9d48-62779621c094
+    job-name: bitpin-incremental-backup-29376735
+  name: bitpin-incremental-backup-29376735
+  namespace: bitpin-task
+  ownerReferences:
+  - apiVersion: batch/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: CronJob
+    name: bitpin-incremental-backup
+    uid: bc350ac8-69a0-410b-86db-ca8514bd6e32
+  resourceVersion: "159511"
+  uid: fee92719-45bd-4422-9d48-62779621c094
+spec:
+  backoffLimit: 6
+  completionMode: NonIndexed
+  completions: 1
+  manualSelector: false
+  parallelism: 1
+  podReplacementPolicy: TerminatingOrFailed
+  selector:
+    matchLabels:
+      batch.kubernetes.io/controller-uid: fee92719-45bd-4422-9d48-62779621c094
+  suspend: false
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        batch.kubernetes.io/controller-uid: fee92719-45bd-4422-9d48-62779621c094
+        batch.kubernetes.io/job-name: bitpin-incremental-backup-29376735
+        controller-uid: fee92719-45bd-4422-9d48-62779621c094
+        job-name: bitpin-incremental-backup-29376735
+    spec:
+      containers:
+      - command:
+        - /bin/bash
+        - -c
+        - "set -e\necho \"=== Starting PostgreSQL Incremental Backup ===\"\necho \"Time:
+          $(date)\"\n\n# تنظیم متغیرها\nBACKUP_DIR=\"/backups/incremental\"\nTIMESTAMP=$(date
+          +%Y%m%d-%H%M%S)\nDATA_BACKUP_FILE=\"$BACKUP_DIR/data-$TIMESTAMP.dump.gz\"\nSCHEMA_BACKUP_FILE=\"$BACKUP_DIR/schema-$TIMESTAMP.dump.gz\"\nLOG_FILE=\"$BACKUP_DIR/incremental-$TIMESTAMP.log\"\n\nmkdir
+          -p $BACKUP_DIR\n\necho \"Backup directory: $BACKUP_DIR\"\necho \"Data backup:
+          $DATA_BACKUP_FILE\"\necho \"Schema backup: $SCHEMA_BACKUP_FILE\"\n\n# بکاپ
+          schema (فقط یکبار در روز یا اگر تغییر کرد)\necho \"Checking if schema backup
+          is needed...\"\nLATEST_SCHEMA=$(find $BACKUP_DIR -name \"schema-*.dump.gz\"
+          -type f -exec ls -t {} + | head -1)\n\nif [ -z \"$LATEST_SCHEMA\" ]; then\n
+          \   echo \"Creating initial schema backup...\"\n    PGPASSWORD=\"jyoUv5DqaAyqFr4UTvakX6N5DcsCsiHDRqau0YH3cXjXD9pd4FL8lnMDltnaax9s\"
+          pg_dump \\\n      -h bitpin-cluster-rw.bitpin-task.svc.cluster.local \\\n
+          \     -p 5432 \\\n      -U bitpin_user \\\n      -d bitpin_db \\\n      --schema-only
+          \\\n      --verbose | gzip -9 > $SCHEMA_BACKUP_FILE 2>> $LOG_FILE\n    echo
+          \"✓ Schema backup created\"\nelse\n    echo \"✓ Using existing schema backup:
+          $(basename $LATEST_SCHEMA)\"\n    # برای صرفه‌جویی در فضا، schema جدید نمی‌سازیم
+          مگر اینکه لازم باشد\nfi\n\n# بکاپ داده‌ها (فقط داده‌ها)\necho \"Creating
+          incremental data backup...\"\nPGPASSWORD=\"jyoUv5DqaAyqFr4UTvakX6N5DcsCsiHDRqau0YH3cXjXD9pd4FL8lnMDltnaax9s\"
+          pg_dump \\\n  -h bitpin-cluster-rw.bitpin-task.svc.cluster.local \\\n  -p
+          5432 \\\n  -U bitpin_user \\\n  -d bitpin_db \\\n  --data-only \\\n  --verbose
+          \\\n  --format=custom | gzip -9 > $DATA_BACKUP_FILE 2>> $LOG_FILE\n\n# بررسی
+          موفقیت آمیز بودن بکاپ\nif [ $? -eq 0 ]; then\n    echo \"✓ Incremental data
+          backup completed successfully\"\n    DATA_SIZE=$(du -h \"$DATA_BACKUP_FILE\"
+          | cut -f1)\n    echo \"✓ Data backup size: $DATA_SIZE\"\n    \n    # اگر
+          schema هم ساخته شد، اندازه آن را هم نمایش بده\n    if [ -f \"$SCHEMA_BACKUP_FILE\"
+          ]; then\n        SCHEMA_SIZE=$(du -h \"$SCHEMA_BACKUP_FILE\" | cut -f1)\n
+          \       echo \"✓ Schema backup size: $SCHEMA_SIZE\"\n    fi\nelse\n    echo
+          \"✗ Incremental backup failed!\"\n    cat $LOG_FILE\n    exit 1\nfi\n\n#
+          لیست آخرین بکاپ‌ها\necho \"=== Latest incremental backups ===\"\nls -lt
+          $BACKUP_DIR/data-*.gz 2>/dev/null | head -5 || echo \"No data backup files
+          found\"\n\n# حذف بکاپ‌های قدیمی (بیش از ۷ روز)\necho \"=== Cleaning up old
+          incremental backups ===\"\nfind $BACKUP_DIR -name \"data-*.gz\" -mtime +7
+          -delete\nfind $BACKUP_DIR -name \"schema-*.gz\" -mtime +7 -delete\nfind
+          $BACKUP_DIR -name \"incremental-*.log\" -mtime +7 -delete\n\necho \"✓ Cleanup
+          completed\"\necho \"=== Incremental backup process finished ===\"\necho
+          \"Time: $(date)\"\n"
+        image: postgres:15
+        imagePullPolicy: IfNotPresent
+        name: incremental-backup
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /backups
+          name: backup-storage
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/hostname: mobin-log-backup-able
+      restartPolicy: OnFailure
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - hostPath:
+          path: /mnt/backups
+          type: Directory
+        name: backup-storage
+status:
+  completionTime: "2025-11-08T12:15:08Z"
+  conditions:
+  - lastProbeTime: "2025-11-08T12:15:08Z"
+    lastTransitionTime: "2025-11-08T12:15:08Z"
+    message: Reached expected number of succeeded pods
+    reason: CompletionsReached
+    status: "True"
+    type: SuccessCriteriaMet
+  - lastProbeTime: "2025-11-08T12:15:08Z"
+    lastTransitionTime: "2025-11-08T12:15:08Z"
+    message: Reached expected number of succeeded pods
+    reason: CompletionsReached
+    status: "True"
+    type: Complete
+  ready: 0
+  startTime: "2025-11-08T12:15:00Z"
+  succeeded: 1
+  terminating: 0
+  uncountedTerminatedPods: {}

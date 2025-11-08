@@ -1,0 +1,103 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  annotations:
+    batch.kubernetes.io/cronjob-scheduled-timestamp: "2025-11-08T13:45:00Z"
+  creationTimestamp: "2025-11-08T13:45:00Z"
+  generation: 1
+  labels:
+    batch.kubernetes.io/controller-uid: 5771f1d0-3393-405d-aa38-a278872da49b
+    batch.kubernetes.io/job-name: bitpin-wal-backup-29376825
+    controller-uid: 5771f1d0-3393-405d-aa38-a278872da49b
+    job-name: bitpin-wal-backup-29376825
+  name: bitpin-wal-backup-29376825
+  namespace: bitpin-task
+  ownerReferences:
+  - apiVersion: batch/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: CronJob
+    name: bitpin-wal-backup
+    uid: 216d8763-a2dd-4c1d-946f-497acdc1e9b1
+  resourceVersion: "168147"
+  uid: 5771f1d0-3393-405d-aa38-a278872da49b
+spec:
+  backoffLimit: 6
+  completionMode: NonIndexed
+  completions: 1
+  manualSelector: false
+  parallelism: 1
+  podReplacementPolicy: TerminatingOrFailed
+  selector:
+    matchLabels:
+      batch.kubernetes.io/controller-uid: 5771f1d0-3393-405d-aa38-a278872da49b
+  suspend: false
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        batch.kubernetes.io/controller-uid: 5771f1d0-3393-405d-aa38-a278872da49b
+        batch.kubernetes.io/job-name: bitpin-wal-backup-29376825
+        controller-uid: 5771f1d0-3393-405d-aa38-a278872da49b
+        job-name: bitpin-wal-backup-29376825
+    spec:
+      containers:
+      - command:
+        - /bin/bash
+        - -c
+        - "set -e\necho \"=== Starting WAL Archive Backup ===\"\necho \"Time: $(date)\"\n\nBACKUP_DIR=\"/backups/incremental\"\nTIMESTAMP=$(date
+          +%Y%m%d-%H%M%S)\nLOG_FILE=\"$BACKUP_DIR/wal-$TIMESTAMP.log\"\n\nmkdir -p
+          $BACKUP_DIR\n\n# ایجاد WAL backup با استفاده از pg_basebackup برای PITR\necho
+          \"Creating WAL archive backup...\"\nPGPASSWORD=\"jyoUv5DqaAyqFr4UTvakX6N5DcsCsiHDRqau0YH3cXjXD9pd4FL8lnMDltnaax9s\"
+          pg_basebackup \\\n  -h bitpin-cluster-rw.bitpin-task.svc.cluster.local \\\n
+          \ -p 5432 \\\n  -U bitpin_user \\\n  -D \"$BACKUP_DIR/wal-backup-$TIMESTAMP\"
+          \\\n  -F tar \\\n  -X stream \\\n  -P 2>&1 | tee $LOG_FILE\n\n# فشرده‌سازی
+          WAL backup\nif [ $? -eq 0 ]; then\n    echo \"Compressing WAL backup...\"\n
+          \   tar -czf \"$BACKUP_DIR/wal-backup-$TIMESTAMP.tar.gz\" -C \"$BACKUP_DIR\"
+          \"wal-backup-$TIMESTAMP\"\n    rm -rf \"$BACKUP_DIR/wal-backup-$TIMESTAMP\"\n
+          \   \n    WAL_SIZE=$(du -h \"$BACKUP_DIR/wal-backup-$TIMESTAMP.tar.gz\"
+          | cut -f1)\n    echo \"✓ WAL backup completed successfully\"\n    echo \"✓
+          WAL backup size: $WAL_SIZE\"\nelse\n    echo \"✗ WAL backup failed!\"\n
+          \   exit 1\nfi\n\n# حذف بکاپ‌های قدیمی\nfind $BACKUP_DIR -name \"wal-backup-*.tar.gz\"
+          -mtime +7 -delete\nfind $BACKUP_DIR -name \"wal-*.log\" -mtime +7 -delete\n\necho
+          \"✓ Cleanup completed\"\n"
+        image: postgres:15
+        imagePullPolicy: IfNotPresent
+        name: wal-backup
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /backups
+          name: backup-storage
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/hostname: mobin-log-backup-able
+      restartPolicy: OnFailure
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - hostPath:
+          path: /mnt/backups
+          type: Directory
+        name: backup-storage
+status:
+  conditions:
+  - lastProbeTime: "2025-11-08T13:50:55Z"
+    lastTransitionTime: "2025-11-08T13:50:55Z"
+    message: Job has reached the specified backoff limit
+    reason: BackoffLimitExceeded
+    status: "True"
+    type: FailureTarget
+  - lastProbeTime: "2025-11-08T13:50:56Z"
+    lastTransitionTime: "2025-11-08T13:50:56Z"
+    message: Job has reached the specified backoff limit
+    reason: BackoffLimitExceeded
+    status: "True"
+    type: Failed
+  failed: 1
+  ready: 0
+  startTime: "2025-11-08T13:45:00Z"
+  terminating: 0
+  uncountedTerminatedPods: {}

@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    meta.helm.sh/release-name: cnpg
+    meta.helm.sh/release-namespace: cnpg-system
+  creationTimestamp: "2025-11-07T07:53:22Z"
+  labels:
+    app.kubernetes.io/instance: cnpg
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cloudnative-pg
+    app.kubernetes.io/version: 1.27.1
+    helm.sh/chart: cloudnative-pg-0.26.1
+  name: cnpg-webhook-service
+  namespace: cnpg-system
+  resourceVersion: "8023"
+  uid: e3d4df5e-abbc-45c2-93ce-c311c022483e
+spec:
+  clusterIP: 10.43.47.75
+  clusterIPs:
+  - 10.43.47.75
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: webhook-server
+    port: 443
+    protocol: TCP
+    targetPort: webhook-server
+  selector:
+    app.kubernetes.io/instance: cnpg
+    app.kubernetes.io/name: cloudnative-pg
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}

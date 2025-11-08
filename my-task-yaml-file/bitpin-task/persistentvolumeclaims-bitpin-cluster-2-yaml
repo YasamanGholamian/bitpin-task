@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  annotations:
+    cnpg.io/nodeSerial: "2"
+    cnpg.io/operatorVersion: 1.27.1
+    cnpg.io/pvcStatus: ready
+    pv.kubernetes.io/bind-completed: "yes"
+    pv.kubernetes.io/bound-by-controller: "yes"
+  creationTimestamp: "2025-11-07T10:00:25Z"
+  finalizers:
+  - kubernetes.io/pvc-protection
+  labels:
+    cnpg.io/cluster: bitpin-cluster
+    cnpg.io/instanceName: bitpin-cluster-2
+    cnpg.io/instanceRole: replica
+    cnpg.io/pvcRole: PG_DATA
+    role: replica
+  name: bitpin-cluster-2
+  namespace: bitpin-task
+  ownerReferences:
+  - apiVersion: postgresql.cnpg.io/v1
+    controller: true
+    kind: Cluster
+    name: bitpin-cluster
+    uid: 1a43e070-4777-4a29-858a-c9313ba36c4a
+  resourceVersion: "20688"
+  uid: ee937a46-8368-439a-8d03-4e56266bb275
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: ""
+  volumeMode: Filesystem
+  volumeName: pv-bitpin-replica
+status:
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: 5Gi
+  phase: Bound

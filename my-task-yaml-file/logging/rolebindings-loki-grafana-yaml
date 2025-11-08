@@ -1,0 +1,25 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    meta.helm.sh/release-name: loki
+    meta.helm.sh/release-namespace: logging
+  creationTimestamp: "2025-11-07T21:34:08Z"
+  labels:
+    app.kubernetes.io/instance: loki
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/version: 10.3.3
+    helm.sh/chart: grafana-6.43.5
+  name: loki-grafana
+  namespace: logging
+  resourceVersion: "82501"
+  uid: f72557b0-dd68-46e8-bb78-45abff8d3050
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: loki-grafana
+subjects:
+- kind: ServiceAccount
+  name: loki-grafana
+  namespace: logging

@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    meta.helm.sh/release-name: loki
+    meta.helm.sh/release-namespace: logging
+  creationTimestamp: "2025-11-07T21:34:08Z"
+  labels:
+    app: loki
+    app.kubernetes.io/managed-by: Helm
+    chart: loki-2.16.0
+    heritage: Helm
+    release: loki
+  name: loki
+  namespace: logging
+  resourceVersion: "82509"
+  uid: d72f5447-23aa-4056-a7b2-3d1a85006fd0
+spec:
+  clusterIP: 10.43.22.252
+  clusterIPs:
+  - 10.43.22.252
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: http-metrics
+    port: 3100
+    protocol: TCP
+    targetPort: http-metrics
+  selector:
+    app: loki
+    release: loki
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}

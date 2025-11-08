@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  creationTimestamp: "2025-11-07T07:53:22Z"
+  labels:
+    kubernetes.io/metadata.name: cnpg-system
+    name: cnpg-system
+  name: cnpg-system
+  resourceVersion: "7987"
+  uid: 39402186-cf9a-4e9a-9e97-ed9330949d31
+spec:
+  finalizers:
+  - kubernetes
+status:
+  phase: Active

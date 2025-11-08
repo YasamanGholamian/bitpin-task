@@ -1,0 +1,145 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  annotations:
+    deployment.kubernetes.io/desired-replicas: "1"
+    deployment.kubernetes.io/max-replicas: "2"
+    deployment.kubernetes.io/revision: "1"
+    meta.helm.sh/release-name: cnpg
+    meta.helm.sh/release-namespace: cnpg-system
+  creationTimestamp: "2025-11-07T07:53:23Z"
+  generation: 1
+  labels:
+    app.kubernetes.io/instance: cnpg
+    app.kubernetes.io/name: cloudnative-pg
+    pod-template-hash: 6d77b4c55
+  name: cnpg-cloudnative-pg-6d77b4c55
+  namespace: cnpg-system
+  ownerReferences:
+  - apiVersion: apps/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: Deployment
+    name: cnpg-cloudnative-pg
+    uid: 6f08ae41-acd2-4964-a99a-1f73be108266
+  resourceVersion: "35852"
+  uid: e2e4656b-2ff6-4bae-b3f5-276087270879
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: cnpg
+      app.kubernetes.io/name: cloudnative-pg
+      pod-template-hash: 6d77b4c55
+  template:
+    metadata:
+      annotations:
+        checksum/config: e98968318a269d20e56c01f502359a3ec9eaf13353276f48ce10a7f426ccdd00
+        checksum/monitoring-config: dbf5358d9a0c43aa092c29fb15e6994f9185d90b78360bca67c881e87bb35442
+        checksum/rbac: b678e04ec9b9b1cc5fc34343565eafbf92bcf402fc3a7e444feafcc72e5762f9
+      creationTimestamp: null
+      labels:
+        app.kubernetes.io/instance: cnpg
+        app.kubernetes.io/name: cloudnative-pg
+        pod-template-hash: 6d77b4c55
+    spec:
+      containers:
+      - args:
+        - controller
+        - --leader-elect
+        - --max-concurrent-reconciles=10
+        - --config-map-name=cnpg-controller-manager-config
+        - --webhook-port=9443
+        command:
+        - /manager
+        env:
+        - name: OPERATOR_IMAGE_NAME
+          value: ghcr.io/cloudnative-pg/cloudnative-pg:1.27.1
+        - name: OPERATOR_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: MONITORING_QUERIES_CONFIGMAP
+          value: cnpg-default-monitoring
+        image: ghcr.io/cloudnative-pg/cloudnative-pg:1.27.1
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /readyz
+            port: 9443
+            scheme: HTTPS
+          initialDelaySeconds: 3
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: manager
+        ports:
+        - containerPort: 8080
+          name: metrics
+          protocol: TCP
+        - containerPort: 9443
+          name: webhook-server
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /readyz
+            port: 9443
+            scheme: HTTPS
+          initialDelaySeconds: 3
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsGroup: 10001
+          runAsUser: 10001
+          seccompProfile:
+            type: RuntimeDefault
+        startupProbe:
+          failureThreshold: 6
+          httpGet:
+            path: /readyz
+            port: 9443
+            scheme: HTTPS
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 1
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /controller
+          name: scratch-data
+        - mountPath: /run/secrets/cnpg.io/webhook
+          name: webhook-certificates
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccount: cnpg-cloudnative-pg
+      serviceAccountName: cnpg-cloudnative-pg
+      terminationGracePeriodSeconds: 10
+      volumes:
+      - emptyDir: {}
+        name: scratch-data
+      - name: webhook-certificates
+        secret:
+          defaultMode: 420
+          optional: true
+          secretName: cnpg-webhook-cert
+status:
+  availableReplicas: 1
+  fullyLabeledReplicas: 1
+  observedGeneration: 1
+  readyReplicas: 1
+  replicas: 1

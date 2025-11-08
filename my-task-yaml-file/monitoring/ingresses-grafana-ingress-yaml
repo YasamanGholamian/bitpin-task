@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"networking.k8s.io/v1","kind":"Ingress","metadata":{"annotations":{},"name":"grafana-ingress","namespace":"monitoring"},"spec":{"rules":[{"host":"monitoring.bitpin.local","http":{"paths":[{"backend":{"service":{"name":"grafana","port":{"number":3000}}},"path":"/","pathType":"Prefix"}]}}]}}
+  creationTimestamp: "2025-11-07T16:34:54Z"
+  generation: 1
+  name: grafana-ingress
+  namespace: monitoring
+  resourceVersion: "55380"
+  uid: c0cd01ea-4b6c-4b7c-8b8d-4652db8021df
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: monitoring.bitpin.local
+    http:
+      paths:
+      - backend:
+          service:
+            name: grafana
+            port:
+              number: 3000
+        path: /
+        pathType: Prefix
+status:
+  loadBalancer:
+    ingress:
+    - ip: 10.33.3.42

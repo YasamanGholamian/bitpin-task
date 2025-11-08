@@ -1,0 +1,26 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    cnpg.io/operatorVersion: 1.27.1
+  creationTimestamp: "2025-11-07T10:00:04Z"
+  labels:
+    cnpg.io/cluster: bitpin-cluster
+  name: bitpin-cluster
+  namespace: bitpin-task
+  ownerReferences:
+  - apiVersion: postgresql.cnpg.io/v1
+    controller: true
+    kind: Cluster
+    name: bitpin-cluster
+    uid: 1a43e070-4777-4a29-858a-c9313ba36c4a
+  resourceVersion: "20529"
+  uid: ced6f106-135a-4445-8f47-12a0c6fa42e4
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: bitpin-cluster
+subjects:
+- kind: ServiceAccount
+  name: bitpin-cluster
+  namespace: bitpin-task

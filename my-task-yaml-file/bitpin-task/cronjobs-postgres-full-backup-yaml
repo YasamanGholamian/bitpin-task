@@ -1,0 +1,76 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"batch/v1","kind":"CronJob","metadata":{"annotations":{},"name":"postgres-full-backup","namespace":"bitpin-task"},"spec":{"jobTemplate":{"spec":{"template":{"spec":{"containers":[{"command":["/bin/bash","-c","set -e\n\nPASSWORD=\"jyoUv5DqaAyqFr4UTvakX6N5DcsCsiHDRqau0YH3cXjXD9pd4FL8lnMDltnaax9s\"\nexport PGPASSWORD=$PASSWORD\n\nBACKUP_DIR=\"/backups/full\"\nmkdir -p $BACKUP_DIR\nBACKUP_FILE=\"$BACKUP_DIR/backup-$(date +%Y%m%d-%H%M%S).sql\"\n\necho \"Starting backup at $(date)\"\n\npg_dump \\\n  -h bitpin-cluster-rw.bitpin-task.svc.cluster.local \\\n  -p 5432 \\\n  -U bitpin_user \\\n  -d bitpin_db \\\n  --verbose \\\n  --format=custom \\\n  --file=\"$BACKUP_FILE\"\n\necho \"Backup completed: $BACKUP_FILE\"\necho \"Backup size: $(du -h $BACKUP_FILE | cut -f1)\"\n\n# حذف بکاپ‌های قدیمی\nfind $BACKUP_DIR -name \"*.sql\" -mtime +7 -delete\necho \"Cleanup completed\"\n"],"image":"postgres:15","name":"postgres-backup","volumeMounts":[{"mountPath":"/backups","name":"backup-volume"}]}],"restartPolicy":"OnFailure","volumes":[{"name":"backup-volume","persistentVolumeClaim":{"claimName":"backup-pvc"}}]}}}},"schedule":"0 2 * * *","successfulJobsHistoryLimit":7}}
+  creationTimestamp: "2025-11-08T08:07:25Z"
+  generation: 3
+  name: postgres-full-backup
+  namespace: bitpin-task
+  resourceVersion: "136621"
+  uid: c0869c22-8ed1-4b32-8061-73b70bedbb45
+spec:
+  concurrencyPolicy: Allow
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    metadata:
+      creationTimestamp: null
+    spec:
+      template:
+        metadata:
+          creationTimestamp: null
+        spec:
+          containers:
+          - command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+
+              PASSWORD="jyoUv5DqaAyqFr4UTvakX6N5DcsCsiHDRqau0YH3cXjXD9pd4FL8lnMDltnaax9s"
+              export PGPASSWORD=$PASSWORD
+
+              BACKUP_DIR="/backups/full"
+              mkdir -p $BACKUP_DIR
+              BACKUP_FILE="$BACKUP_DIR/backup-$(date +%Y%m%d-%H%M%S).sql"
+
+              echo "Starting backup at $(date)"
+
+              pg_dump \
+                -h bitpin-cluster-rw.bitpin-task.svc.cluster.local \
+                -p 5432 \
+                -U bitpin_user \
+                -d bitpin_db \
+                --verbose \
+                --format=custom \
+                --file="$BACKUP_FILE"
+
+              echo "Backup completed: $BACKUP_FILE"
+              echo "Backup size: $(du -h $BACKUP_FILE | cut -f1)"
+
+              # حذف بکاپ‌های قدیمی
+              find $BACKUP_DIR -name "*.sql" -mtime +7 -delete
+              echo "Cleanup completed"
+            image: postgres:15
+            imagePullPolicy: IfNotPresent
+            name: postgres-backup
+            resources: {}
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+            volumeMounts:
+            - mountPath: /backups
+              name: backup-volume
+          dnsPolicy: ClusterFirst
+          restartPolicy: OnFailure
+          schedulerName: default-scheduler
+          securityContext: {}
+          terminationGracePeriodSeconds: 30
+          volumes:
+          - name: backup-volume
+            persistentVolumeClaim:
+              claimName: backup-pvc
+  schedule: 0 2 * * *
+  successfulJobsHistoryLimit: 7
+  suspend: false
+status: {}

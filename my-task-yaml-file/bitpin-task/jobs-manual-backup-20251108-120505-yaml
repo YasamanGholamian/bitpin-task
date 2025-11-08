@@ -1,0 +1,136 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  annotations:
+    cronjob.kubernetes.io/instantiate: manual
+  creationTimestamp: "2025-11-08T08:35:05Z"
+  generation: 1
+  labels:
+    batch.kubernetes.io/controller-uid: 7553f292-8b3c-4ea0-b0c5-dac19c11fdfb
+    batch.kubernetes.io/job-name: manual-backup-20251108-120505
+    controller-uid: 7553f292-8b3c-4ea0-b0c5-dac19c11fdfb
+    job-name: manual-backup-20251108-120505
+  name: manual-backup-20251108-120505
+  namespace: bitpin-task
+  ownerReferences:
+  - apiVersion: batch/v1
+    kind: CronJob
+    name: bitpin-daily-backup
+    uid: 9af36651-14dd-4791-92ea-870484630d91
+  resourceVersion: "138671"
+  uid: 7553f292-8b3c-4ea0-b0c5-dac19c11fdfb
+spec:
+  backoffLimit: 6
+  completionMode: NonIndexed
+  completions: 1
+  manualSelector: false
+  parallelism: 1
+  podReplacementPolicy: TerminatingOrFailed
+  selector:
+    matchLabels:
+      batch.kubernetes.io/controller-uid: 7553f292-8b3c-4ea0-b0c5-dac19c11fdfb
+  suspend: false
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        batch.kubernetes.io/controller-uid: 7553f292-8b3c-4ea0-b0c5-dac19c11fdfb
+        batch.kubernetes.io/job-name: manual-backup-20251108-120505
+        controller-uid: 7553f292-8b3c-4ea0-b0c5-dac19c11fdfb
+        job-name: manual-backup-20251108-120505
+    spec:
+      containers:
+      - command:
+        - /bin/bash
+        - -c
+        - |
+          set -e
+          echo "=== Starting PostgreSQL Backup ==="
+          echo "Time: $(date)"
+
+          # تنظیم متغیرها
+          BACKUP_DIR="/backups/full"
+          BACKUP_FILE="$BACKUP_DIR/backup-$(date +%Y%m%d-%H%M%S).dump"
+          LOG_FILE="$BACKUP_DIR/backup-$(date +%Y%m%d-%H%M%S).log"
+
+          # ایجاد دایرکتوری اگر وجود ندارد
+          mkdir -p $BACKUP_DIR
+
+          echo "Backup directory: $BACKUP_DIR"
+          echo "Backup file: $BACKUP_FILE"
+
+          # گرفتن بکاپ
+          echo "Starting pg_dump..."
+          PGPASSWORD="jyoUv5DqaAyqFr4UTvakX6N5DcsCsiHDRqau0YH3cXjXD9pd4FL8lnMDltnaax9s" pg_dump \
+            -h bitpin-cluster-rw.bitpin-task.svc.cluster.local \
+            -p 5432 \
+            -U bitpin_user \
+            -d bitpin_db \
+            --verbose \
+            --format=custom \
+            --compress=9 \
+            --file="$BACKUP_FILE" 2>&1 | tee $LOG_FILE
+
+          # بررسی موفقیت آمیز بودن بکاپ
+          if [ ${PIPESTATUS[0]} -eq 0 ]; then
+              echo "✓ Backup completed successfully"
+              BACKUP_SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
+              echo "✓ Backup size: $BACKUP_SIZE"
+          else
+              echo "✗ Backup failed!"
+              exit 1
+          fi
+
+          # لیست بکاپ‌های موجود
+          echo "=== Current backups ==="
+          ls -la $BACKUP_DIR/*.dump 2>/dev/null || echo "No backup files found"
+
+          # حذف بکاپ‌های قدیمی (بیش از ۷ روز)
+          echo "=== Cleaning up old backups ==="
+          find $BACKUP_DIR -name "*.dump" -mtime +7 -delete
+          find $BACKUP_DIR -name "*.log" -mtime +7 -delete
+
+          echo "✓ Cleanup completed"
+          echo "=== Backup process finished ==="
+          echo "Time: $(date)"
+        image: postgres:15
+        imagePullPolicy: IfNotPresent
+        name: postgres-backup
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /backups
+          name: backup-storage
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/hostname: mobin-log-backup-able
+      restartPolicy: OnFailure
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - hostPath:
+          path: /mnt/backups
+          type: Directory
+        name: backup-storage
+status:
+  completionTime: "2025-11-08T08:35:09Z"
+  conditions:
+  - lastProbeTime: "2025-11-08T08:35:09Z"
+    lastTransitionTime: "2025-11-08T08:35:09Z"
+    message: Reached expected number of succeeded pods
+    reason: CompletionsReached
+    status: "True"
+    type: SuccessCriteriaMet
+  - lastProbeTime: "2025-11-08T08:35:09Z"
+    lastTransitionTime: "2025-11-08T08:35:09Z"
+    message: Reached expected number of succeeded pods
+    reason: CompletionsReached
+    status: "True"
+    type: Complete
+  ready: 0
+  startTime: "2025-11-08T08:35:05Z"
+  succeeded: 1
+  terminating: 0
+  uncountedTerminatedPods: {}

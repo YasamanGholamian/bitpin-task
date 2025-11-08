@@ -1,0 +1,84 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"batch/v1","kind":"CronJob","metadata":{"annotations":{},"name":"bitpin-full-backup-simple","namespace":"bitpin-task"},"spec":{"concurrencyPolicy":"Allow","failedJobsHistoryLimit":1,"jobTemplate":{"spec":{"template":{"spec":{"containers":[{"command":["/bin/bash","-c","mkdir -p /mnt/backups/full\nchmod 777 /mnt/backups/full\nBACKUP_FILE=\"/mnt/backups/full/bitpin-backup-$(date +%F-%H%M%S).sql.gz\"\necho \"Starting backup...\"\npg_dump -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME | gzip \u003e \"$BACKUP_FILE\"\necho \"Backup saved to $BACKUP_FILE\"\nfind /mnt/backups/full -type f -mtime +7 -delete\n"],"env":[{"name":"PGPASSWORD","valueFrom":{"secretKeyRef":{"key":"password","name":"bitpin-cluster-app"}}},{"name":"DB_HOST","valueFrom":{"secretKeyRef":{"key":"host","name":"bitpin-cluster-app"}}},{"name":"DB_PORT","valueFrom":{"secretKeyRef":{"key":"port","name":"bitpin-cluster-app"}}},{"name":"DB_NAME","valueFrom":{"secretKeyRef":{"key":"dbname","name":"bitpin-cluster-app"}}},{"name":"DB_USER","valueFrom":{"secretKeyRef":{"key":"username","name":"bitpin-cluster-app"}}}],"image":"postgres:15","name":"full-backup","volumeMounts":[{"mountPath":"/mnt/backups","name":"backup-storage"}]}],"restartPolicy":"OnFailure","volumes":[{"hostPath":{"path":"/mnt/backups"},"name":"backup-storage"}]}}}},"schedule":"0 2 * * *","successfulJobsHistoryLimit":3}}
+  creationTimestamp: "2025-11-08T07:59:01Z"
+  generation: 2
+  name: bitpin-full-backup-simple
+  namespace: bitpin-task
+  resourceVersion: "135365"
+  uid: 2357cb83-4994-4d64-9543-261b0271bb4e
+spec:
+  concurrencyPolicy: Allow
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    metadata:
+      creationTimestamp: null
+    spec:
+      template:
+        metadata:
+          creationTimestamp: null
+        spec:
+          containers:
+          - command:
+            - /bin/bash
+            - -c
+            - |
+              mkdir -p /mnt/backups/full
+              chmod 777 /mnt/backups/full
+              BACKUP_FILE="/mnt/backups/full/bitpin-backup-$(date +%F-%H%M%S).sql.gz"
+              echo "Starting backup..."
+              pg_dump -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME | gzip > "$BACKUP_FILE"
+              echo "Backup saved to $BACKUP_FILE"
+              find /mnt/backups/full -type f -mtime +7 -delete
+            env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: bitpin-cluster-app
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  key: host
+                  name: bitpin-cluster-app
+            - name: DB_PORT
+              valueFrom:
+                secretKeyRef:
+                  key: port
+                  name: bitpin-cluster-app
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  key: dbname
+                  name: bitpin-cluster-app
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  key: username
+                  name: bitpin-cluster-app
+            image: postgres:15
+            imagePullPolicy: IfNotPresent
+            name: full-backup
+            resources: {}
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+            volumeMounts:
+            - mountPath: /mnt/backups
+              name: backup-storage
+          dnsPolicy: ClusterFirst
+          restartPolicy: OnFailure
+          schedulerName: default-scheduler
+          securityContext: {}
+          terminationGracePeriodSeconds: 30
+          volumes:
+          - hostPath:
+              path: /mnt/backups
+              type: ""
+            name: backup-storage
+  schedule: 0 2 * * *
+  successfulJobsHistoryLimit: 3
+  suspend: false
+status: {}

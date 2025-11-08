@@ -1,0 +1,75 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"batch/v1","kind":"CronJob","metadata":{"annotations":{},"name":"bitpin-daily-backup-zip","namespace":"bitpin-task"},"spec":{"jobTemplate":{"spec":{"template":{"spec":{"containers":[{"command":["/bin/bash","-c","set -e\necho \"=== Starting PostgreSQL Backup ===\"\necho \"Time: $(date)\"\n\n# نصب zip اگر وجود ندارد\napt-get update \u0026\u0026 apt-get install -y zip || true\n\n# تنظیم متغیرها\nBACKUP_DIR=\"/backups/full\"\nTIMESTAMP=$(date +%Y%m%d-%H%M%S)\nBACKUP_FILE=\"$BACKUP_DIR/backup-$TIMESTAMP.dump\"\nZIP_FILE=\"$BACKUP_DIR/backup-$TIMESTAMP.zip\"\nLOG_FILE=\"$BACKUP_DIR/backup-$TIMESTAMP.log\"\n\nmkdir -p $BACKUP_DIR\n\necho \"Backup directory: $BACKUP_DIR\"\necho \"Backup file: $BACKUP_FILE\"\necho \"Zip file: $ZIP_FILE\"\n\n# گرفتن بکاپ\necho \"Starting pg_dump...\"\nPGPASSWORD=\"jyoUv5DqaAyqFr4UTvakX6N5DcsCsiHDRqau0YH3cXjXD9pd4FL8lnMDltnaax9s\" pg_dump \\\n  -h bitpin-cluster-rw.bitpin-task.svc.cluster.local \\\n  -p 5432 \\\n  -U bitpin_user \\\n  -d bitpin_db \\\n  --verbose \\\n  --format=custom \\\n  --file=\"$BACKUP_FILE\" 2\u003e\u00261 | tee $LOG_FILE\n\n# بررسی موفقیت آمیز بودن بکاپ\nif [ ${PIPESTATUS[0]} -eq 0 ]; then\n    echo \"✓ Backup completed successfully\"\n    \n    # فشرده‌سازی با zip\n    echo \"Compressing backup with zip...\"\n    zip -j -9 \"$ZIP_FILE\" \"$BACKUP_FILE\" \"$LOG_FILE\"\n    \n    # حذف فایل اصلی\n    rm -f \"$BACKUP_FILE\"\n    \n    ZIP_SIZE=$(du -h \"$ZIP_FILE\" | cut -f1)\n    echo \"✓ Zip file size: $ZIP_SIZE\"\n    echo \"✓ Backup archived to: $ZIP_FILE\"\nelse\n    echo \"✗ Backup failed!\"\n    exit 1\nfi\n\n# لیست بکاپ‌های موجود\necho \"=== Current backups ===\"\nls -la $BACKUP_DIR/*.zip 2\u003e/dev/null || echo \"No backup files found\"\n\n# حذف بکاپ‌های قدیمی (بیش از ۷ روز)\necho \"=== Cleaning up old backups ===\"\nfind $BACKUP_DIR -name \"*.zip\" -mtime +7 -delete\nfind $BACKUP_DIR -name \"*.log\" -mtime +7 -delete\n\necho \"✓ Cleanup completed\"\necho \"=== Backup process finished ===\"\necho \"Time: $(date)\"\n"],"image":"postgres:15","name":"postgres-backup","volumeMounts":[{"mountPath":"/backups","name":"backup-storage"}]}],"nodeSelector":{"kubernetes.io/hostname":"mobin-log-backup-able"},"restartPolicy":"OnFailure","volumes":[{"hostPath":{"path":"/mnt/backups","type":"Directory"},"name":"backup-storage"}]}}}},"schedule":"0 2 * * *","successfulJobsHistoryLimit":7}}
+  creationTimestamp: "2025-11-08T08:35:00Z"
+  generation: 1
+  name: bitpin-daily-backup-zip
+  namespace: bitpin-task
+  resourceVersion: "138639"
+  uid: 89058ab3-c1f0-487f-b22f-b6138c56dd69
+spec:
+  concurrencyPolicy: Allow
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    metadata:
+      creationTimestamp: null
+    spec:
+      template:
+        metadata:
+          creationTimestamp: null
+        spec:
+          containers:
+          - command:
+            - /bin/bash
+            - -c
+            - "set -e\necho \"=== Starting PostgreSQL Backup ===\"\necho \"Time: $(date)\"\n\n#
+              نصب zip اگر وجود ندارد\napt-get update && apt-get install -y zip ||
+              true\n\n# تنظیم متغیرها\nBACKUP_DIR=\"/backups/full\"\nTIMESTAMP=$(date
+              +%Y%m%d-%H%M%S)\nBACKUP_FILE=\"$BACKUP_DIR/backup-$TIMESTAMP.dump\"\nZIP_FILE=\"$BACKUP_DIR/backup-$TIMESTAMP.zip\"\nLOG_FILE=\"$BACKUP_DIR/backup-$TIMESTAMP.log\"\n\nmkdir
+              -p $BACKUP_DIR\n\necho \"Backup directory: $BACKUP_DIR\"\necho \"Backup
+              file: $BACKUP_FILE\"\necho \"Zip file: $ZIP_FILE\"\n\n# گرفتن بکاپ\necho
+              \"Starting pg_dump...\"\nPGPASSWORD=\"jyoUv5DqaAyqFr4UTvakX6N5DcsCsiHDRqau0YH3cXjXD9pd4FL8lnMDltnaax9s\"
+              pg_dump \\\n  -h bitpin-cluster-rw.bitpin-task.svc.cluster.local \\\n
+              \ -p 5432 \\\n  -U bitpin_user \\\n  -d bitpin_db \\\n  --verbose \\\n
+              \ --format=custom \\\n  --file=\"$BACKUP_FILE\" 2>&1 | tee $LOG_FILE\n\n#
+              بررسی موفقیت آمیز بودن بکاپ\nif [ ${PIPESTATUS[0]} -eq 0 ]; then\n    echo
+              \"✓ Backup completed successfully\"\n    \n    # فشرده‌سازی با zip\n
+              \   echo \"Compressing backup with zip...\"\n    zip -j -9 \"$ZIP_FILE\"
+              \"$BACKUP_FILE\" \"$LOG_FILE\"\n    \n    # حذف فایل اصلی\n    rm -f
+              \"$BACKUP_FILE\"\n    \n    ZIP_SIZE=$(du -h \"$ZIP_FILE\" | cut -f1)\n
+              \   echo \"✓ Zip file size: $ZIP_SIZE\"\n    echo \"✓ Backup archived
+              to: $ZIP_FILE\"\nelse\n    echo \"✗ Backup failed!\"\n    exit 1\nfi\n\n#
+              لیست بکاپ‌های موجود\necho \"=== Current backups ===\"\nls -la $BACKUP_DIR/*.zip
+              2>/dev/null || echo \"No backup files found\"\n\n# حذف بکاپ‌های قدیمی
+              (بیش از ۷ روز)\necho \"=== Cleaning up old backups ===\"\nfind $BACKUP_DIR
+              -name \"*.zip\" -mtime +7 -delete\nfind $BACKUP_DIR -name \"*.log\"
+              -mtime +7 -delete\n\necho \"✓ Cleanup completed\"\necho \"=== Backup
+              process finished ===\"\necho \"Time: $(date)\"\n"
+            image: postgres:15
+            imagePullPolicy: IfNotPresent
+            name: postgres-backup
+            resources: {}
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+            volumeMounts:
+            - mountPath: /backups
+              name: backup-storage
+          dnsPolicy: ClusterFirst
+          nodeSelector:
+            kubernetes.io/hostname: mobin-log-backup-able
+          restartPolicy: OnFailure
+          schedulerName: default-scheduler
+          securityContext: {}
+          terminationGracePeriodSeconds: 30
+          volumes:
+          - hostPath:
+              path: /mnt/backups
+              type: Directory
+            name: backup-storage
+  schedule: 0 2 * * *
+  successfulJobsHistoryLimit: 7
+  suspend: false
+status: {}

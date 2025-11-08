@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  annotations:
+    deployment.kubernetes.io/desired-replicas: "2"
+    deployment.kubernetes.io/max-replicas: "3"
+    deployment.kubernetes.io/revision: "9"
+  creationTimestamp: "2025-11-07T14:29:50Z"
+  generation: 3
+  labels:
+    app: bitpin-app
+    pod-template-hash: fcf548495
+  name: bitpin-app-fcf548495
+  namespace: bitpin-task
+  ownerReferences:
+  - apiVersion: apps/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: Deployment
+    name: bitpin-app
+    uid: 0a4d233f-34d8-4e4e-8284-a2c4c405a740
+  resourceVersion: "47410"
+  uid: 59db3b98-2908-490b-aada-5d4015193636
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: bitpin-app
+      pod-template-hash: fcf548495
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/restartedAt: "2025-11-07T16:57:32+03:30"
+      creationTimestamp: null
+      labels:
+        app: bitpin-app
+        pod-template-hash: fcf548495
+    spec:
+      containers:
+      - env:
+        - name: ALLOWED_HOSTS
+          value: '*'
+        image: yasaman664/bitpin-task:latest
+        imagePullPolicy: Always
+        name: bitpin-app
+        ports:
+        - containerPort: 8000
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /app/Exchange/staticfiles
+          name: static-volume
+        - mountPath: /app/Exchange/media
+          name: media-volume
+      dnsPolicy: ClusterFirst
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - python3 /app/Exchange/manage.py collectstatic --noinput
+        image: yasaman664/bitpin-task:latest
+        imagePullPolicy: Always
+        name: init-collectstatic
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /app/Exchange/staticfiles
+          name: static-volume
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - hostPath:
+          path: /mnt/bitpin-app/static
+          type: DirectoryOrCreate
+        name: static-volume
+      - hostPath:
+          path: /mnt/bitpin-app/media
+          type: DirectoryOrCreate
+        name: media-volume
+status:
+  observedGeneration: 3
+  replicas: 0

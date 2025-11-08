@@ -1,0 +1,38 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  annotations:
+    cnpg.io/operatorVersion: 1.27.1
+  creationTimestamp: "2025-11-07T10:00:03Z"
+  generation: 1
+  labels:
+    cnpg.io/cluster: bitpin-cluster
+  name: bitpin-cluster-primary
+  namespace: bitpin-task
+  ownerReferences:
+  - apiVersion: postgresql.cnpg.io/v1
+    controller: true
+    kind: Cluster
+    name: bitpin-cluster
+    uid: 1a43e070-4777-4a29-858a-c9313ba36c4a
+  resourceVersion: "152975"
+  uid: c46e8dc5-eb70-439c-92dc-e804031cae36
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      cnpg.io/cluster: bitpin-cluster
+      cnpg.io/instanceRole: primary
+status:
+  conditions:
+  - lastTransitionTime: "2025-11-07T10:00:03Z"
+    message: ""
+    observedGeneration: 1
+    reason: InsufficientPods
+    status: "False"
+    type: DisruptionAllowed
+  currentHealthy: 1
+  desiredHealthy: 1
+  disruptionsAllowed: 0
+  expectedPods: 1
+  observedGeneration: 1

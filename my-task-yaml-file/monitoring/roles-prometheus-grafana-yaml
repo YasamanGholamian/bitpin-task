@@ -1,0 +1,18 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    meta.helm.sh/release-name: prometheus
+    meta.helm.sh/release-namespace: monitoring
+  creationTimestamp: "2025-11-07T19:25:29Z"
+  labels:
+    app.kubernetes.io/instance: prometheus
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/version: 12.2.1
+    helm.sh/chart: grafana-10.1.4
+  name: prometheus-grafana
+  namespace: monitoring
+  resourceVersion: "71133"
+  uid: 5236c483-f971-49a8-b4a8-d4233f6f9cd8
+rules: null

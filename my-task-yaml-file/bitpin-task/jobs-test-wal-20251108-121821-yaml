@@ -1,0 +1,101 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  annotations:
+    cronjob.kubernetes.io/instantiate: manual
+  creationTimestamp: "2025-11-08T08:48:22Z"
+  generation: 1
+  labels:
+    batch.kubernetes.io/controller-uid: d40e07d3-5404-4db9-8999-23d30ea5cd95
+    batch.kubernetes.io/job-name: test-wal-20251108-121821
+    controller-uid: d40e07d3-5404-4db9-8999-23d30ea5cd95
+    job-name: test-wal-20251108-121821
+  name: test-wal-20251108-121821
+  namespace: bitpin-task
+  ownerReferences:
+  - apiVersion: batch/v1
+    kind: CronJob
+    name: bitpin-wal-backup
+    uid: 216d8763-a2dd-4c1d-946f-497acdc1e9b1
+  resourceVersion: "140437"
+  uid: d40e07d3-5404-4db9-8999-23d30ea5cd95
+spec:
+  backoffLimit: 6
+  completionMode: NonIndexed
+  completions: 1
+  manualSelector: false
+  parallelism: 1
+  podReplacementPolicy: TerminatingOrFailed
+  selector:
+    matchLabels:
+      batch.kubernetes.io/controller-uid: d40e07d3-5404-4db9-8999-23d30ea5cd95
+  suspend: false
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        batch.kubernetes.io/controller-uid: d40e07d3-5404-4db9-8999-23d30ea5cd95
+        batch.kubernetes.io/job-name: test-wal-20251108-121821
+        controller-uid: d40e07d3-5404-4db9-8999-23d30ea5cd95
+        job-name: test-wal-20251108-121821
+    spec:
+      containers:
+      - command:
+        - /bin/bash
+        - -c
+        - "set -e\necho \"=== Starting WAL Archive Backup ===\"\necho \"Time: $(date)\"\n\nBACKUP_DIR=\"/backups/incremental\"\nTIMESTAMP=$(date
+          +%Y%m%d-%H%M%S)\nLOG_FILE=\"$BACKUP_DIR/wal-$TIMESTAMP.log\"\n\nmkdir -p
+          $BACKUP_DIR\n\n# ایجاد WAL backup با استفاده از pg_basebackup برای PITR\necho
+          \"Creating WAL archive backup...\"\nPGPASSWORD=\"jyoUv5DqaAyqFr4UTvakX6N5DcsCsiHDRqau0YH3cXjXD9pd4FL8lnMDltnaax9s\"
+          pg_basebackup \\\n  -h bitpin-cluster-rw.bitpin-task.svc.cluster.local \\\n
+          \ -p 5432 \\\n  -U bitpin_user \\\n  -D \"$BACKUP_DIR/wal-backup-$TIMESTAMP\"
+          \\\n  -F tar \\\n  -X stream \\\n  -P 2>&1 | tee $LOG_FILE\n\n# فشرده‌سازی
+          WAL backup\nif [ $? -eq 0 ]; then\n    echo \"Compressing WAL backup...\"\n
+          \   tar -czf \"$BACKUP_DIR/wal-backup-$TIMESTAMP.tar.gz\" -C \"$BACKUP_DIR\"
+          \"wal-backup-$TIMESTAMP\"\n    rm -rf \"$BACKUP_DIR/wal-backup-$TIMESTAMP\"\n
+          \   \n    WAL_SIZE=$(du -h \"$BACKUP_DIR/wal-backup-$TIMESTAMP.tar.gz\"
+          | cut -f1)\n    echo \"✓ WAL backup completed successfully\"\n    echo \"✓
+          WAL backup size: $WAL_SIZE\"\nelse\n    echo \"✗ WAL backup failed!\"\n
+          \   exit 1\nfi\n\n# حذف بکاپ‌های قدیمی\nfind $BACKUP_DIR -name \"wal-backup-*.tar.gz\"
+          -mtime +7 -delete\nfind $BACKUP_DIR -name \"wal-*.log\" -mtime +7 -delete\n\necho
+          \"✓ Cleanup completed\"\n"
+        image: postgres:15
+        imagePullPolicy: IfNotPresent
+        name: wal-backup
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /backups
+          name: backup-storage
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/hostname: mobin-log-backup-able
+      restartPolicy: OnFailure
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - hostPath:
+          path: /mnt/backups
+          type: Directory
+        name: backup-storage
+status:
+  conditions:
+  - lastProbeTime: "2025-11-08T08:54:07Z"
+    lastTransitionTime: "2025-11-08T08:54:07Z"
+    message: Job has reached the specified backoff limit
+    reason: BackoffLimitExceeded
+    status: "True"
+    type: FailureTarget
+  - lastProbeTime: "2025-11-08T08:54:08Z"
+    lastTransitionTime: "2025-11-08T08:54:08Z"
+    message: Job has reached the specified backoff limit
+    reason: BackoffLimitExceeded
+    status: "True"
+    type: Failed
+  failed: 1
+  ready: 0
+  startTime: "2025-11-08T08:48:22Z"
+  terminating: 0
+  uncountedTerminatedPods: {}

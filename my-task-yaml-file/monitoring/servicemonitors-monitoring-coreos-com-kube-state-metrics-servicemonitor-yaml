@@ -1,0 +1,21 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"monitoring.coreos.com/v1","kind":"ServiceMonitor","metadata":{"annotations":{},"name":"kube-state-metrics-servicemonitor","namespace":"monitoring"},"spec":{"endpoints":[{"interval":"15s","port":"http-metrics"}],"namespaceSelector":{"any":true},"selector":{"matchLabels":{"app.kubernetes.io/name":"kube-state-metrics"}}}}
+  creationTimestamp: "2025-11-07T19:42:23Z"
+  generation: 1
+  name: kube-state-metrics-servicemonitor
+  namespace: monitoring
+  resourceVersion: "73114"
+  uid: e90e0e46-e4d9-4641-a867-ce78e0a0cce3
+spec:
+  endpoints:
+  - interval: 15s
+    port: http-metrics
+  namespaceSelector:
+    any: true
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kube-state-metrics

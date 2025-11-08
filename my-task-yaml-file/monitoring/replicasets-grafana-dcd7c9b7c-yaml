@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  annotations:
+    deployment.kubernetes.io/desired-replicas: "1"
+    deployment.kubernetes.io/max-replicas: "2"
+    deployment.kubernetes.io/revision: "3"
+  creationTimestamp: "2025-11-07T16:34:54Z"
+  generation: 1
+  labels:
+    app: grafana
+    pod-template-hash: dcd7c9b7c
+  name: grafana-dcd7c9b7c
+  namespace: monitoring
+  ownerReferences:
+  - apiVersion: apps/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: Deployment
+    name: grafana
+    uid: 3df9de41-1692-41ea-9ea6-957ecd20b542
+  resourceVersion: "55451"
+  uid: 487f2195-460e-422d-9637-eebcc7ff6d1e
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+      pod-template-hash: dcd7c9b7c
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: grafana
+        pod-template-hash: dcd7c9b7c
+    spec:
+      containers:
+      - env:
+        - name: GF_SECURITY_ADMIN_USER
+          value: admin
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          value: admin123
+        image: grafana/grafana:10.0.1
+        imagePullPolicy: Always
+        name: grafana
+        ports:
+        - containerPort: 3000
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+status:
+  availableReplicas: 1
+  fullyLabeledReplicas: 1
+  observedGeneration: 1
+  readyReplicas: 1
+  replicas: 1

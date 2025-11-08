@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"name":"prometheus-svc","namespace":"monitoring"},"spec":{"ports":[{"name":"web","port":9090,"targetPort":9090}],"selector":{"app.kubernetes.io/component":"prometheus","app.kubernetes.io/name":"prometheus"},"type":"ClusterIP"}}
+  creationTimestamp: "2025-11-07T19:37:22Z"
+  name: prometheus-svc
+  namespace: monitoring
+  resourceVersion: "72685"
+  uid: 948aaf90-4a5c-4e97-b98c-055d39faab68
+spec:
+  clusterIP: 10.43.91.148
+  clusterIPs:
+  - 10.43.91.148
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: web
+    port: 9090
+    protocol: TCP
+    targetPort: 9090
+  selector:
+    app.kubernetes.io/component: prometheus
+    app.kubernetes.io/name: prometheus
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}

@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  annotations:
+    deployment.kubernetes.io/desired-replicas: "1"
+    deployment.kubernetes.io/max-replicas: "2"
+    deployment.kubernetes.io/revision: "1"
+  creationTimestamp: "2025-11-07T16:25:25Z"
+  generation: 2
+  labels:
+    app: prometheus
+    pod-template-hash: 6f9589b4c7
+  name: prometheus-6f9589b4c7
+  namespace: monitoring
+  ownerReferences:
+  - apiVersion: apps/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: Deployment
+    name: prometheus
+    uid: eb86d12e-2139-43f1-a9d8-b69df65d98dc
+  resourceVersion: "54706"
+  uid: 9f3bd9d2-228f-48b0-a8c9-a08f7abf2a22
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: prometheus
+      pod-template-hash: 6f9589b4c7
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: prometheus
+        pod-template-hash: 6f9589b4c7
+    spec:
+      containers:
+      - args:
+        - --config.file=/etc/prometheus/prometheus.yml
+        - --storage.tsdb.path=/prometheus
+        image: prom/prometheus:latest
+        imagePullPolicy: Always
+        name: prometheus
+        ports:
+        - containerPort: 9090
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /prometheus
+          name: prometheus-data
+        - mountPath: /etc/prometheus/
+          name: prometheus-config
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - hostPath:
+          path: /mnt/prometheus/data
+          type: ""
+        name: prometheus-data
+      - configMap:
+          defaultMode: 420
+          name: prometheus-config
+        name: prometheus-config
+status:
+  observedGeneration: 2
+  replicas: 0

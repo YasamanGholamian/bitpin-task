@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  annotations:
+    meta.helm.sh/release-name: cnpg
+    meta.helm.sh/release-namespace: cnpg-system
+  creationTimestamp: "2025-11-07T07:53:22Z"
+  labels:
+    app.kubernetes.io/instance: cnpg
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cloudnative-pg
+    app.kubernetes.io/version: 1.27.1
+    helm.sh/chart: cloudnative-pg-0.26.1
+  name: cnpg-controller-manager-config
+  namespace: cnpg-system
+  resourceVersion: "7993"
+  uid: 2283398d-89be-42c6-9781-5a8e98025759

@@ -1,0 +1,158 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    cnpg.io/operatorVersion: 1.27.1
+  creationTimestamp: "2025-11-07T10:00:03Z"
+  labels:
+    cnpg.io/cluster: bitpin-cluster
+  name: bitpin-cluster
+  namespace: bitpin-task
+  ownerReferences:
+  - apiVersion: postgresql.cnpg.io/v1
+    controller: true
+    kind: Cluster
+    name: bitpin-cluster
+    uid: 1a43e070-4777-4a29-858a-c9313ba36c4a
+  resourceVersion: "20528"
+  uid: 2e590678-f8ed-402e-89fa-9dbab04906ad
+rules:
+- apiGroups:
+  - ""
+  resourceNames:
+  - bitpin-cluster
+  - cnpg-default-monitoring
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - watch
+- apiGroups:
+  - ""
+  resourceNames:
+  - bitpin-cluster-app
+  - bitpin-cluster-ca
+  - bitpin-cluster-replication
+  - bitpin-cluster-server
+  - bitpin-cluster-superuser
+  resources:
+  - secrets
+  verbs:
+  - get
+  - watch
+- apiGroups:
+  - postgresql.cnpg.io
+  resourceNames:
+  - bitpin-cluster
+  resources:
+  - clusters
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - postgresql.cnpg.io
+  resourceNames:
+  - bitpin-cluster
+  resources:
+  - clusters/status
+  verbs:
+  - get
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - postgresql.cnpg.io
+  resources:
+  - backups
+  verbs:
+  - list
+  - get
+  - delete
+- apiGroups:
+  - postgresql.cnpg.io
+  resources:
+  - backups/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - postgresql.cnpg.io
+  resources:
+  - databases
+  verbs:
+  - get
+  - update
+  - list
+  - watch
+- apiGroups:
+  - postgresql.cnpg.io
+  resources:
+  - databases/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - postgresql.cnpg.io
+  resources:
+  - publications
+  verbs:
+  - get
+  - update
+  - list
+  - watch
+- apiGroups:
+  - postgresql.cnpg.io
+  resources:
+  - publications/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - postgresql.cnpg.io
+  resources:
+  - subscriptions
+  verbs:
+  - get
+  - update
+  - list
+  - watch
+- apiGroups:
+  - postgresql.cnpg.io
+  resources:
+  - subscriptions/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - postgresql.cnpg.io
+  resourceNames:
+  - bitpin-cluster
+  resources:
+  - failoverquorums
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - postgresql.cnpg.io
+  resourceNames:
+  - bitpin-cluster
+  resources:
+  - failoverquorums/status
+  verbs:
+  - get
+  - patch
+  - update
+  - watch

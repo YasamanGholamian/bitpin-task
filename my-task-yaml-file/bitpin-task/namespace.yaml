@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"v1","kind":"Namespace","metadata":{"annotations":{},"name":"bitpin-task"}}
+  creationTimestamp: "2025-11-07T10:00:03Z"
+  labels:
+    kubernetes.io/metadata.name: bitpin-task
+  name: bitpin-task
+  resourceVersion: "20485"
+  uid: 4239f099-da54-4cfe-ad43-d6b0c1628f7d
+spec:
+  finalizers:
+  - kubernetes
+status:
+  phase: Active

@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  annotations:
+    deployment.kubernetes.io/desired-replicas: "1"
+    deployment.kubernetes.io/max-replicas: "2"
+    deployment.kubernetes.io/revision: "1"
+  creationTimestamp: "2025-11-07T17:27:16Z"
+  generation: 2
+  labels:
+    app: kube-state-metrics
+    pod-template-hash: dfd8cc74
+  name: kube-state-metrics-dfd8cc74
+  namespace: monitoring
+  ownerReferences:
+  - apiVersion: apps/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: Deployment
+    name: kube-state-metrics
+    uid: 5afe3db7-c6e5-45e3-be77-025e7d3a4d80
+  resourceVersion: "60961"
+  uid: f936ccf3-70e9-43a7-8169-a0613a6dccc0
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: kube-state-metrics
+      pod-template-hash: dfd8cc74
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: kube-state-metrics
+        pod-template-hash: dfd8cc74
+    spec:
+      containers:
+      - args:
+        - --host=0.0.0.0
+        - --port=8080
+        - --metric-labels-allowlist=pods=*,nodes=*,namespaces=*
+        image: k8s.gcr.io/kube-state-metrics/kube-state-metrics:v2.12.0
+        imagePullPolicy: IfNotPresent
+        name: kube-state-metrics
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+status:
+  observedGeneration: 2
+  replicas: 0

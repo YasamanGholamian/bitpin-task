@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"networking.k8s.io/v1","kind":"Ingress","metadata":{"annotations":{"kubernetes.io/ingress.class":"traefik"},"name":"grafana-ingress","namespace":"logging"},"spec":{"rules":[{"host":"loki.bitpin.local","http":{"paths":[{"backend":{"service":{"name":"loki-grafana","port":{"number":80}}},"path":"/","pathType":"Prefix"}]}}]}}
+    kubernetes.io/ingress.class: traefik
+  creationTimestamp: "2025-11-07T21:39:06Z"
+  generation: 1
+  name: grafana-ingress
+  namespace: logging
+  resourceVersion: "83081"
+  uid: 77143b02-9202-4807-abf9-1490293ca09e
+spec:
+  rules:
+  - host: loki.bitpin.local
+    http:
+      paths:
+      - backend:
+          service:
+            name: loki-grafana
+            port:
+              number: 80
+        path: /
+        pathType: Prefix
+status:
+  loadBalancer:
+    ingress:
+    - ip: 10.33.3.42

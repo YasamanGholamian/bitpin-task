@@ -1,0 +1,20 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"monitoring.coreos.com/v1","kind":"PodMonitor","metadata":{"annotations":{},"name":"bitpin-task-monitor","namespace":"monitoring"},"spec":{"namespaceSelector":{"matchNames":["bitpin-task"]},"podMetricsEndpoints":[{"path":"/metrics","port":"metrics"}],"selector":{}}}
+  creationTimestamp: "2025-11-07T19:49:56Z"
+  generation: 1
+  name: bitpin-task-monitor
+  namespace: monitoring
+  resourceVersion: "73738"
+  uid: 075af0b4-3780-4cf4-9aa4-dac428000c49
+spec:
+  namespaceSelector:
+    matchNames:
+    - bitpin-task
+  podMetricsEndpoints:
+  - path: /metrics
+    port: metrics
+  selector: {}
