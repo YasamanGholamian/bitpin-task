@@ -1,6 +1,6 @@
 # Bitpin Task - Kubernetes Deployment
 
-This repository contains the complete Kubernetes deployment configuration for the Bitpin cryptocurrency exchange application, including Helm charts, CI/CD pipelines, monitoring, and logging solutions.
+This repository contains Kubernetes manifests, Helm charts, and CI/CD pipelines for deploying the Bitpin cryptocurrency exchange application.
 
 ## 📋 Table of Contents
 
@@ -9,142 +9,80 @@ This repository contains the complete Kubernetes deployment configuration for th
 - [Prerequisites](#prerequisites)
 - [Directory Structure](#directory-structure)
 - [Deployment](#deployment)
-- [CI/CD Pipeline](#cicd-pipeline)
+- [CI/CD](#cicd)
 - [Monitoring & Logging](#monitoring--logging)
-- [Database Backup](#database-backup)
-- [Troubleshooting](#troubleshooting)
+- [Backup Strategy](#backup-strategy)
 
 ## 🎯 Overview
 
-This project implements a production-ready Kubernetes deployment for a Django-based cryptocurrency exchange application. The infrastructure includes:
-
-- **Application**: Django/Python backend application
-- **Database**: PostgreSQL with CloudNativePG (Primary + Replica setup)
-- **Load Balancing**: NodePort service with Ingress support
-- **Monitoring**: Prometheus + Grafana
-- **Logging**: Loki + Grafana + Promtail
-- **CI/CD**: GitHub Actions for automated build and deployment
-- **Backup**: Automated database backup with CronJobs
+This project deploys a Django-based cryptocurrency exchange application on Kubernetes with:
+- PostgreSQL database cluster (CloudNativePG)
+- Automated backups
+- Monitoring (Prometheus + Grafana)
+- Logging (Loki + Grafana)
+- CI/CD pipeline (GitHub Actions)
 
 ## 🏗️ Architecture
 
-### Infrastructure Components
-
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     Kubernetes Cluster                       │
-├─────────────────────────────────────────────────────────────┤
-│                                                               │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │           bitpin-task Namespace                      │   │
-│  │  ┌──────────────┐  ┌──────────────┐                │   │
-│  │  │  bitpin-app  │  │  PostgreSQL  │                │   │
-│  │  │  (Django)    │◄─┤  Cluster     │                │   │
-│  │  │              │  │  (Primary +  │                │   │
-│  │  │  Deployment  │  │   Replica)   │                │   │
-│  │  └──────┬───────┘  └──────────────┘                │   │
-│  │         │                                            │   │
-│  │  ┌──────▼───────┐  ┌──────────────┐                │   │
-│  │  │   Service    │  │  Backup      │                │   │
-│  │  │  (NodePort)  │  │  CronJobs    │                │   │
-│  │  └──────────────┘  └──────────────┘                │   │
-│  └──────────────────────────────────────────────────────┘   │
-│                                                               │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │           monitoring Namespace                       │   │
-│  │  ┌──────────────┐  ┌──────────────┐                │   │
-│  │  │  Prometheus  │  │   Grafana     │                │   │
-│  │  │  (Metrics)   │◄─┤  (Dashboards) │                │   │
-│  │  └──────────────┘  └──────────────┘                │   │
-│  │  ┌──────────────┐  ┌──────────────┐                │   │
-│  │  │ Alertmanager │  │ Node Exporter │                │   │
-│  │  └──────────────┘  └──────────────┘                │   │
-│  └──────────────────────────────────────────────────────┘   │
-│                                                               │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │           logging Namespace                          │   │
-│  │  ┌──────────────┐  ┌──────────────┐                │   │
-│  │  │    Loki      │  │   Grafana    │                │   │
-│  │  │  (Log Store) │◄─┤  (Log View)  │                │   │
-│  │  └──────▲───────┘  └──────────────┘                │   │
-│  │         │                                            │   │
-│  │  ┌──────┴───────┐                                    │   │
-│  │  │  Promtail    │                                    │   │
-│  │  │ (Log Agent)  │                                    │   │
-│  │  └──────────────┘                                    │   │
-│  └──────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────┐
+│   LoadBalancer  │
+│   / Ingress     │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐     ┌─────────────────┐
+│   bitpin-app    │────▶│  PostgreSQL     │
+│   (Django)       │     │  Cluster        │
+│   Deployment    │     │  (Primary+Replica)│
+└─────────────────┘     └─────────────────┘
+         │
+         ├─────────────────┐
+         ▼                 ▼
+┌─────────────────┐  ┌─────────────────┐
+│   Prometheus    │  │      Loki        │
+│   (Metrics)     │  │   (Logs)        │
+└─────────────────┘  └─────────────────┘
 ```
-
-### Namespace Descriptions
-
-#### bitpin-task Namespace
-- **Purpose**: Main application namespace
-- **Resources**:
-  - `bitpin-app`: Django application deployment
-  - `bitpin-cluster`: PostgreSQL cluster (CloudNativePG)
-  - Services: Application service (NodePort), Database services (RW, RO, R)
-  - CronJobs: Automated database backups (full and incremental)
-
-#### monitoring Namespace
-- **Purpose**: Metrics collection and visualization
-- **Resources**:
-  - Prometheus: Metrics collection and storage
-  - Grafana: Metrics visualization and dashboards
-  - Alertmanager: Alert management
-  - Node Exporter: Node-level metrics
-  - Kube-state-metrics: Kubernetes object metrics
-
-#### logging Namespace
-- **Purpose**: Centralized log aggregation
-- **Resources**:
-  - Loki: Log storage and indexing
-  - Grafana: Log visualization
-  - Promtail: Log collection agent (DaemonSet)
 
 ## 📁 Directory Structure
 
 ```
-bitpin-task-full/
-├── general/                          # Main deployment files
-│   ├── helm/                         # Helm charts
-│   │   └── bitpin-app/              # Application Helm chart
-│   │       ├── Chart.yaml
-│   │       ├── values.yaml
-│   │       └── templates/
-│   │           ├── deployment.yaml
-│   │           ├── service.yaml
-│   │           ├── ingress.yaml
-│   │           ├── hpa.yaml
-│   │           └── _helpers.tpl
-│   ├── .github/                      # CI/CD workflows
-│   │   └── workflows/
-│   │       ├── ci-cd.yml            # Main CI/CD pipeline
-│   │       └── backup-job.yml       # Backup automation
-│   ├── *.yaml                        # Kubernetes resource files
-│   │   ├── bitpin-app-deployment.yaml
-│   │   ├── bitpin-app-service.yaml
-│   │   ├── bitpin-postgres-cluster.yaml
-│   │   ├── bitpin-backup-cronjobs.yaml
-│   │   ├── bitpin-task-resources.yaml
-│   │   ├── logging-resources.yaml
-│   │   └── monitoring-resources.yaml
-│   └── README.md                     # This file
-└── app/                              # Application-specific files
-    ├── bitpin-task-namespace-description.txt
-    ├── logging-namespace-description.txt
-    └── monitoring-namespace-description.txt
+general/
+├── helm/
+│   └── bitpin-app/          # Helm chart for application
+│       ├── Chart.yaml
+│       ├── values.yaml
+│       └── templates/
+│           ├── deployment.yaml
+│           ├── service.yaml
+│           ├── ingress.yaml
+│           ├── hpa.yaml
+│           └── _helpers.tpl
+├── .github/
+│   └── workflows/
+│       ├── ci-cd.yml        # Main CI/CD pipeline
+│       └── backup-job.yml   # Backup automation
+├── bitpin-app-deployment.yaml
+├── bitpin-app-service.yaml
+├── bitpin-postgres-cluster.yaml
+├── bitpin-backup-cronjobs.yaml
+├── bitpin-task-namespace.yaml
+├── logging-resources.yaml
+├── monitoring-resources.yaml
+└── README.md
 ```
 
-## 🚀 Deployment
-
-### Prerequisites
+## 🚀 Prerequisites
 
 - Kubernetes cluster (v1.24+)
 - kubectl configured
 - Helm 3.x installed
+- CloudNativePG operator installed
 - Docker (for building images)
-- CloudNativePG operator (for PostgreSQL cluster)
+- GitHub repository with secrets configured
+
+## 📦 Deployment
 
 ### Step 1: Install CloudNativePG Operator
 
@@ -155,11 +93,7 @@ kubectl apply -f https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg
 ### Step 2: Deploy PostgreSQL Cluster
 
 ```bash
-kubectl apply -f general/bitpin-postgres-cluster.yaml
-```
-
-Wait for the cluster to be ready:
-```bash
+kubectl apply -f bitpin-postgres-cluster.yaml
 kubectl wait --for=condition=Ready cluster/bitpin-cluster -n bitpin-task --timeout=300s
 ```
 
@@ -167,12 +101,12 @@ kubectl wait --for=condition=Ready cluster/bitpin-cluster -n bitpin-task --timeo
 
 ```bash
 # Install the Helm chart
-helm install bitpin-app ./general/helm/bitpin-app \
+helm install bitpin-app ./helm/bitpin-app \
   --namespace bitpin-task \
   --create-namespace
 
 # Or upgrade if already installed
-helm upgrade --install bitpin-app ./general/helm/bitpin-app \
+helm upgrade --install bitpin-app ./helm/bitpin-app \
   --namespace bitpin-task \
   --create-namespace
 ```
@@ -180,31 +114,12 @@ helm upgrade --install bitpin-app ./general/helm/bitpin-app \
 ### Step 4: Verify Deployment
 
 ```bash
-# Check application pods
 kubectl get pods -n bitpin-task
-
-# Check services
 kubectl get svc -n bitpin-task
-
-# Check application logs
 kubectl logs -f deployment/bitpin-app -n bitpin-task
 ```
 
-### Step 5: Access the Application
-
-The application is exposed via NodePort service. Get the node IP and port:
-
-```bash
-# Get node IP
-kubectl get nodes -o wide
-
-# Get service port
-kubectl get svc bitpin-app-svc -n bitpin-task
-
-# Access: http://<NODE_IP>:<NODE_PORT>
-```
-
-## 🔄 CI/CD Pipeline
+## 🔄 CI/CD
 
 ### GitHub Actions Workflows
 
@@ -213,11 +128,12 @@ kubectl get svc bitpin-app-svc -n bitpin-task
 **Triggers:**
 - Push to main/master branch
 - Pull requests to main/master
+- Manual trigger (workflow_dispatch)
 
 **Jobs:**
-1. **Build and Push**: Builds Docker image and pushes to registry
-2. **Deploy**: Deploys application to Kubernetes using Helm
-3. **Lint Helm**: Validates Helm chart syntax
+1. **Build and Push**: Builds Docker image and pushes to Docker Hub
+2. **Lint Helm**: Validates Helm chart syntax
+3. **Deploy**: Deploys application to Kubernetes using Helm
 
 **Required Secrets:**
 - `DOCKER_USERNAME`: Docker Hub username
@@ -237,12 +153,11 @@ kubectl get svc bitpin-app-svc -n bitpin-task
 ### Setting Up CI/CD
 
 1. **Add GitHub Secrets:**
-   ```bash
-   # In GitHub repository: Settings > Secrets and variables > Actions
-   DOCKER_USERNAME=your-username
-   DOCKER_PASSWORD=your-token
-   KUBECONFIG=$(cat ~/.kube/config | base64 -w 0)
-   ```
+   - Go to: Settings > Secrets and variables > Actions
+   - Add:
+     - `DOCKER_USERNAME`: your-username
+     - `DOCKER_PASSWORD`: your-token
+     - `KUBECONFIG`: `$(cat ~/.kube/config | base64 -w 0)`
 
 2. **Push to trigger pipeline:**
    ```bash
@@ -251,26 +166,23 @@ kubectl get svc bitpin-app-svc -n bitpin-task
 
 ## 📊 Monitoring & Logging
 
-### Accessing Monitoring Dashboards
+### Accessing Dashboards
 
 #### Prometheus
 ```bash
-# Port forward to access Prometheus
 kubectl port-forward svc/prometheus-kube-prometheus-prometheus -n monitoring 9090:9090
 # Access: http://localhost:9090
 ```
 
 #### Grafana (Monitoring)
 ```bash
-# Port forward to access Grafana
 kubectl port-forward svc/grafana -n monitoring 3000:3000
 # Access: http://localhost:3000
-# Default credentials: admin/admin (change on first login)
+# Default: admin/admin
 ```
 
 #### Grafana (Logging)
 ```bash
-# Port forward to access Loki Grafana
 kubectl port-forward svc/loki-grafana -n logging 3001:80
 # Access: http://localhost:3001
 ```
@@ -283,17 +195,9 @@ kubectl port-forward svc/loki-grafana -n logging 3001:80
 - Resource utilization (CPU, Memory)
 - Pod restart counts
 
-### Log Aggregation
+## 💾 Backup Strategy
 
-- Application logs collected by Promtail
-- Stored in Loki
-- Queryable via Grafana LogQL
-
-## 💾 Database Backup
-
-### Backup Strategy
-
-The deployment includes multiple backup mechanisms:
+### Backup Mechanisms
 
 1. **Full Backup CronJob**: Runs daily at 2 AM UTC
    - Job: `bitpin-full-backup`
@@ -321,7 +225,6 @@ kubectl logs job/<backup-job-name> -n bitpin-task
 ### Helm Values
 
 Edit `helm/bitpin-app/values.yaml` to customize:
-
 - Replica count
 - Resource limits/requests
 - Service type and ports
@@ -356,40 +259,24 @@ ingress:
 ### Application Not Starting
 
 ```bash
-# Check pod status
 kubectl get pods -n bitpin-task
-
-# Check pod logs
 kubectl logs -f deployment/bitpin-app -n bitpin-task
-
-# Check events
 kubectl describe pod <pod-name> -n bitpin-task
 ```
 
 ### Database Connection Issues
 
 ```bash
-# Check database cluster status
 kubectl get cluster -n bitpin-task
-
-# Check database pods
 kubectl get pods -n bitpin-task | grep cluster
-
-# Test database connection
 kubectl exec -it bitpin-cluster-1 -n bitpin-task -- psql -U bitpin_user -d bitpin_db
 ```
 
 ### Service Not Accessible
 
 ```bash
-# Check service endpoints
 kubectl get endpoints -n bitpin-task
-
-# Check service configuration
 kubectl describe svc bitpin-app-svc -n bitpin-task
-
-# Test service from within cluster
-kubectl run -it --rm debug --image=curlimages/curl --restart=Never -- curl http://bitpin-app-svc.bitpin-task.svc.cluster.local/healthz/
 ```
 
 ## 📝 Additional Resources
@@ -425,4 +312,3 @@ This project is part of the Bitpin interview task.
 - Configuring backup retention policies
 - Enabling monitoring alerts
 - Implementing proper secret management
-

@@ -1,13 +1,12 @@
 apiVersion: v2
 name: bitpin-app
-description: A Helm chart for Bitpin cryptocurrency exchange application
+description: A Helm chart for Bitpin Task Application
 type: application
 version: 1.0.0
 appVersion: "1.0.0"
 keywords:
+  - bitpin
   - django
-  - cryptocurrency
-  - exchange
+  - postgresql
 maintainers:
-  - name: Bitpin Team
-
+  - name: Yasaman Gholamian

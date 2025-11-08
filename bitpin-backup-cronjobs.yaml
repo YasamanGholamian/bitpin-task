@@ -380,7 +380,7 @@ items:
     generation: 1
     name: bitpin-incremental-backup
     namespace: bitpin-task
-    resourceVersion: "166260"
+    resourceVersion: "167607"
     uid: bc350ac8-69a0-410b-86db-ca8514bd6e32
   spec:
     concurrencyPolicy: Allow
@@ -458,8 +458,8 @@ items:
     successfulJobsHistoryLimit: 96
     suspend: false
   status:
-    lastScheduleTime: "2025-11-08T13:30:00Z"
-    lastSuccessfulTime: "2025-11-08T13:30:07Z"
+    lastScheduleTime: "2025-11-08T13:45:00Z"
+    lastSuccessfulTime: "2025-11-08T13:45:08Z"
 - apiVersion: batch/v1
   kind: CronJob
   metadata:
@@ -470,7 +470,7 @@ items:
     generation: 1
     name: bitpin-wal-backup
     namespace: bitpin-task
-    resourceVersion: "166788"
+    resourceVersion: "167561"
     uid: 216d8763-a2dd-4c1d-946f-497acdc1e9b1
   spec:
     concurrencyPolicy: Allow
@@ -529,7 +529,14 @@ items:
     successfulJobsHistoryLimit: 96
     suspend: false
   status:
-    lastScheduleTime: "2025-11-08T13:30:00Z"
+    active:
+    - apiVersion: batch/v1
+      kind: Job
+      name: bitpin-wal-backup-29376825
+      namespace: bitpin-task
+      resourceVersion: "167558"
+      uid: 5771f1d0-3393-405d-aa38-a278872da49b
+    lastScheduleTime: "2025-11-08T13:45:00Z"
 - apiVersion: batch/v1
   kind: CronJob
   metadata:

@@ -28,27 +28,27 @@ service:
 
 ingress:
   enabled: false
-  className: ""
+  className: "nginx"
   annotations: {}
   hosts:
-    - host: bitpin.local
+    - host: bitpin.example.com
       paths:
         - path: /
           pathType: Prefix
   tls: []
 
-resources: {}
-  # limits:
-  #   cpu: 500m
-  #   memory: 512Mi
-  # requests:
-  #   cpu: 250m
-  #   memory: 256Mi
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
 
 autoscaling:
   enabled: false
   minReplicas: 1
-  maxReplicas: 3
+  maxReplicas: 5
   targetCPUUtilizationPercentage: 80
 
 nodeSelector: {}
@@ -63,17 +63,15 @@ volumes:
   media:
     type: emptyDir
 
-database:
-  secretName: bitpin-cluster-app
-  hostKey: host
-  portKey: port
-  dbnameKey: dbname
-  userKey: user
-  passwordKey: password
-
 env:
-  - name: DJANGO_SETTINGS_MODULE
-    value: Exchange.settings
+  djangoSettingsModule: "Exchange.settings"
+  database:
+    secretName: "bitpin-cluster-app"
+    hostKey: "host"
+    portKey: "port"
+    nameKey: "dbname"
+    userKey: "user"
+    passwordKey: "password"
 
 livenessProbe:
   httpGet:
@@ -92,4 +90,3 @@ readinessProbe:
   periodSeconds: 10
   timeoutSeconds: 1
   failureThreshold: 3
-

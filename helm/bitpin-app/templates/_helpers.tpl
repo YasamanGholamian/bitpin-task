@@ -46,5 +46,5 @@ Selector labels
 {{- define "bitpin-app.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "bitpin-app.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
+app: bitpin-app
 {{- end }}
-

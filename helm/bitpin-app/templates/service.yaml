@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "bitpin-app.fullname" . }}
+  name: {{ include "bitpin-app.fullname" . }}-svc
   labels:
     {{- include "bitpin-app.labels" . | nindent 4 }}
 spec:
@@ -16,4 +16,3 @@ spec:
       {{- end }}
   selector:
     {{- include "bitpin-app.selectorLabels" . | nindent 4 }}
-

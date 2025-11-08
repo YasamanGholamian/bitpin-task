@@ -37,35 +37,33 @@ spec:
               containerPort: 8000
               protocol: TCP
           env:
-            {{- range .Values.env }}
-            - name: {{ .name }}
-              value: {{ .value | quote }}
-            {{- end }}
+            - name: DJANGO_SETTINGS_MODULE
+              value: {{ .Values.env.djangoSettingsModule | quote }}
             - name: DATABASE_HOST
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.database.secretName }}
-                  key: {{ .Values.database.hostKey }}
+                  name: {{ .Values.env.database.secretName }}
+                  key: {{ .Values.env.database.hostKey }}
             - name: DATABASE_PORT
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.database.secretName }}
-                  key: {{ .Values.database.portKey }}
+                  name: {{ .Values.env.database.secretName }}
+                  key: {{ .Values.env.database.portKey }}
             - name: DATABASE_NAME
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.database.secretName }}
-                  key: {{ .Values.database.dbnameKey }}
+                  name: {{ .Values.env.database.secretName }}
+                  key: {{ .Values.env.database.nameKey }}
             - name: DATABASE_USER
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.database.secretName }}
-                  key: {{ .Values.database.userKey }}
+                  name: {{ .Values.env.database.secretName }}
+                  key: {{ .Values.env.database.userKey }}
             - name: DATABASE_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.database.secretName }}
-                  key: {{ .Values.database.passwordKey }}
+                  name: {{ .Values.env.database.secretName }}
+                  key: {{ .Values.env.database.passwordKey }}
           livenessProbe:
             {{- toYaml .Values.livenessProbe | nindent 12 }}
           readinessProbe:
@@ -78,14 +76,14 @@ spec:
             - name: media-volume
               mountPath: /app/Exchange/media
       volumes:
+        {{- if eq .Values.volumes.static.type "emptyDir" }}
         - name: static-volume
-          {{- if eq .Values.volumes.static.type "emptyDir" }}
           emptyDir: {}
-          {{- end }}
+        {{- end }}
+        {{- if eq .Values.volumes.media.type "emptyDir" }}
         - name: media-volume
-          {{- if eq .Values.volumes.media.type "emptyDir" }}
           emptyDir: {}
-          {{- end }}
+        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -98,4 +96,3 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-

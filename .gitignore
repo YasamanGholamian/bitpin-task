@@ -1,18 +1,18 @@
 # Kubernetes
 *.kubeconfig
 kubeconfig
-*.pem
-*.key
-*.crt
+*.yaml.bak
+*.yml.bak
+
+# Helm
+.helm/
+*.tgz
+charts/*.tgz
 
 # Secrets
 secrets/
 *.secret.yaml
-*secret*.yaml
-
-# Helm
-.helm/
-charts/*.tgz
+*.secret.yml
 
 # IDE
 .idea/
@@ -30,24 +30,6 @@ Thumbs.db
 logs/
 
 # Temporary files
+tmp/
+temp/
 *.tmp
-*.temp
-.env
-.env.local
-
-# Backup files
-*.bak
-*.backup
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-venv/
-env/
-
-# Docker
-.dockerignore
-
