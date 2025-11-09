@@ -14,7 +14,6 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: bitpin-app-svc   # <-- این اسم سرویس واقعی است
+            name: bitpin-app-svc  
             port:
-              number: 80           # <-- پورتی که سرویس expose کرده
-
+              number: 80        
